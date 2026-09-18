@@ -1,0 +1,280 @@
+@startuml migrapatron_modelo_datos
+title MigraPatron IA - Modelo Entidad-Relacion (PostgreSQL)
+
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #4B3F8C
+  ArrowColor #5E5B70
+  HeaderBackgroundColor #EEEBF7
+}
+skinparam legendBackgroundColor #F7F6FB
+
+' ===================== M0 : IDENTIDAD =====================
+entity "usuario" as usuario {
+  * id : BIGSERIAL <<PK>>
+  --
+  * email : VARCHAR(150) <<UQ>>
+  * password_hash : VARCHAR(255)
+  * nombre : VARCHAR(80)
+  * apellido : VARCHAR(80)
+  fecha_nacimiento : DATE
+  sexo : ENUM(F, M, OTRO, NS)
+  zona_horaria : VARCHAR(40)
+  * fecha_registro : TIMESTAMPTZ
+  ultimo_acceso : TIMESTAMPTZ
+  * activo : BOOLEAN
+}
+
+entity "perfil_clinico" as perfil {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>> <<UQ>>
+  anios_con_migrana : SMALLINT
+  diagnostico_previo : BOOLEAN
+  tipo_migrana : ENUM(CON_AURA, SIN_AURA,\n  CRONICA, DESCONOCIDA)
+  medicacion_habitual : TEXT
+  ciclo_menstrual_aplica : BOOLEAN
+  * consentimiento_analisis : BOOLEAN
+  fecha_consentimiento : TIMESTAMPTZ
+}
+
+' ============ M4 : CATALOGOS Y METADATOS DEL MOTOR ============
+entity "catalogo_factor" as factor {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * codigo : VARCHAR(30) <<UQ>>
+  * nombre_campo : VARCHAR(40)
+  * etiqueta : VARCHAR(80)
+  * tipo_dato : ENUM(NUMERICO, ORDINAL,\n  BOOLEANO, CATEGORICO)
+  unidad : VARCHAR(20)
+  valor_min : NUMERIC(6,2)
+  valor_max : NUMERIC(6,2)
+  * aplica_lag : BOOLEAN
+  * activo : BOOLEAN
+  * orden : SMALLINT
+}
+
+entity "regla_discretizacion" as regla {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * factor_id : SMALLINT <<FK>>
+  * etiqueta_item : VARCHAR(40)
+  * operador : ENUM(LT, LTE, BETWEEN,\n  EQ, GTE, GT, IN)
+  valor_min : NUMERIC(6,2)
+  valor_max : NUMERIC(6,2)
+  valor_texto : VARCHAR(40)
+  * descripcion_humana : VARCHAR(120)
+  * orden : SMALLINT
+  --
+  UQ(factor_id, etiqueta_item)
+}
+
+entity "alimento" as alimento {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * codigo : VARCHAR(30) <<UQ>>
+  * nombre : VARCHAR(60)
+  * grupo : ENUM(LACTEO, EMBUTIDO, CHOCOLATE,\n  CAFEINA, ALCOHOL, GLUTAMATO,\n  CITRICO, EDULCORANTE, OTRO)
+  * activo : BOOLEAN
+}
+
+entity "sintoma" as sintoma {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * codigo : VARCHAR(30) <<UQ>>
+  * nombre : VARCHAR(60)
+  * activo : BOOLEAN
+}
+
+' ===================== M1 : CAPTURA =====================
+entity "registro_diario" as diario {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * fecha : DATE
+  horas_sueno : NUMERIC(4,2)
+  calidad_sueno : SMALLINT  /* 1..5 */
+  hidratacion : ENUM(BAJA, MEDIA, ALTA)
+  comidas_omitidas : SMALLINT  /* 0..3 */
+  estres_percibido : SMALLINT  /* 1..5 */
+  horas_pantalla : NUMERIC(4,2)
+  minutos_actividad : SMALLINT
+  cafeina_tazas : SMALLINT
+  consumo_alcohol : BOOLEAN
+  fase_ciclo : ENUM(NO_APLICA, MENSTRUACION,\n  FOLICULAR, OVULACION, LUTEA)
+  * completado : BOOLEAN
+  * origen : ENUM(MANUAL, SINTETICO, IMPORTADO)
+  * creado_en : TIMESTAMPTZ
+  * actualizado_en : TIMESTAMPTZ
+  --
+  UQ(usuario_id, fecha)
+  IDX(usuario_id, fecha DESC)
+}
+
+entity "registro_alimento" as regali {
+  * id : BIGSERIAL <<PK>>
+  --
+  * registro_diario_id : BIGINT <<FK>>
+  * alimento_id : SMALLINT <<FK>>
+  porciones : SMALLINT
+  --
+  UQ(registro_diario_id, alimento_id)
+}
+
+entity "episodio_migrana" as episodio {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  registro_diario_id : BIGINT <<FK>> /* NULL */
+  * inicio : TIMESTAMPTZ
+  fin : TIMESTAMPTZ
+  duracion_min : INTEGER
+  * intensidad_eva : SMALLINT  /* 1..10 */
+  localizacion : ENUM(UNILATERAL_IZQ, UNILATERAL_DER,\n  BILATERAL, OCCIPITAL, DIFUSA)
+  tuvo_aura : BOOLEAN
+  medicacion_tomada : VARCHAR(120)
+  minutos_hasta_alivio : INTEGER
+  alivio_percibido : SMALLINT  /* 0..10 */
+  limito_actividad : BOOLEAN
+  notas : TEXT
+  * creado_en : TIMESTAMPTZ
+  --
+  IDX(usuario_id, inicio DESC)
+}
+
+entity "episodio_sintoma" as episin {
+  * id : BIGSERIAL <<PK>>
+  --
+  * episodio_id : BIGINT <<FK>>
+  * sintoma_id : SMALLINT <<FK>>
+  --
+  UQ(episodio_id, sintoma_id)
+}
+
+' ===================== M2 : ANALISIS =====================
+entity "analisis" as analisis {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * ejecutado_en : TIMESTAMPTZ
+  * periodo_inicio : DATE
+  * periodo_fin : DATE
+  * dias_analizados : INTEGER
+  * episodios_analizados : INTEGER
+  * lag_dias : SMALLINT  /* 0..2 */
+  * version_motor : VARCHAR(20)
+  parametros : JSONB  /* soporte_min, confianza_min,\n  lift_min, profundidad_max */
+  * estado : ENUM(OK, DATOS_INSUFICIENTES, ERROR)
+  mensaje_estado : VARCHAR(200)
+  duracion_ms : INTEGER
+  --
+  IDX(usuario_id, ejecutado_en DESC)
+}
+
+entity "hallazgo" as hallazgo {
+  * id : BIGSERIAL <<PK>>
+  --
+  * analisis_id : BIGINT <<FK>>
+  * tipo : ENUM(ASOCIACION, ARBOL,\n  CORRELACION, FRECUENCIA)
+  * antecedente : JSONB  /* ["SUENO_BAJO",\n  "DESAYUNO_OMITIDO"] */
+  soporte : NUMERIC(5,4)
+  confianza : NUMERIC(5,4)
+  lift : NUMERIC(6,3)
+  p_valor : NUMERIC(6,5)
+  * episodios_relacionados : INTEGER
+  * total_episodios : INTEGER
+  * nivel_confianza : ENUM(ALTA, MEDIA, BAJA)
+  * texto_explicacion : TEXT
+  * ranking : SMALLINT
+}
+
+entity "valoracion_hallazgo" as valoracion {
+  * id : BIGSERIAL <<PK>>
+  --
+  * hallazgo_id : BIGINT <<FK>>
+  * usuario_id : BIGINT <<FK>>
+  * util : BOOLEAN
+  comentario : VARCHAR(300)
+  * creado_en : TIMESTAMPTZ
+  --
+  UQ(hallazgo_id, usuario_id)
+}
+
+entity "riesgo_diario" as riesgo {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * fecha : DATE
+  * nivel : ENUM(BAJO, MEDIO, ALTO)
+  * score : NUMERIC(5,2)
+  factores_activos : JSONB
+  analisis_id : BIGINT <<FK>>
+  * calculado_en : TIMESTAMPTZ
+  --
+  UQ(usuario_id, fecha)
+}
+
+' ===================== M3 : REPORTE =====================
+entity "reporte_clinico" as reporte {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * analisis_id : BIGINT <<FK>>
+  * generado_en : TIMESTAMPTZ
+  * periodo_inicio : DATE
+  * periodo_fin : DATE
+  * resumen : TEXT
+  * formato : ENUM(PDF, TEXTO)
+  hash_contenido : VARCHAR(64)
+  veces_compartido : INTEGER
+}
+
+entity "evento_auditoria" as auditoria {
+  * id : BIGSERIAL <<PK>>
+  --
+  usuario_id : BIGINT <<FK>>
+  * accion : VARCHAR(40)
+  * entidad : VARCHAR(40)
+  entidad_id : BIGINT
+  detalle : JSONB
+  ip : INET
+  * ocurrido_en : TIMESTAMPTZ
+}
+
+' ===================== RELACIONES =====================
+usuario ||--|| perfil : tiene
+usuario ||--o{ diario : registra
+usuario ||--o{ episodio : sufre
+usuario ||--o{ analisis : solicita
+usuario ||--o{ riesgo : recibe
+usuario ||--o{ reporte : genera
+usuario ||--o{ valoracion : valora
+usuario ||--o{ auditoria : produce
+
+factor ||--o{ regla : se discretiza con
+
+diario ||--o{ regali : consumio
+alimento ||--o{ regali : aparece en
+
+diario |o--o{ episodio : contexto del dia
+episodio ||--o{ episin : presento
+sintoma ||--o{ episin : aparece en
+
+analisis ||--o{ hallazgo : produce
+hallazgo ||--o{ valoracion : recibe
+analisis |o--o{ riesgo : alimenta
+analisis ||--o{ reporte : respalda
+
+legend right
+  |= Modulo |= Tablas |
+  | M0 Identidad | usuario, perfil_clinico |
+  | M1 Captura | registro_diario, registro_alimento,\nepisodio_migrana, episodio_sintoma |
+  | M2 Analisis | analisis, hallazgo, valoracion_hallazgo,\nriesgo_diario |
+  | M3 Reporte | reporte_clinico |
+  | M4 Catalogos | catalogo_factor, regla_discretizacion,\nalimento, sintoma, evento_auditoria |
+endlegend
+
+@enduml

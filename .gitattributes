@@ -1,0 +1,19 @@
+# Normaliza los finales de línea: el repo guarda LF, Windows hace checkout CRLF.
+* text=auto eol=lf
+
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+*.ps1    text eol=crlf
+
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.jks    binary
+*.keystore binary
+*.ttf    binary
+*.otf    binary
+*.woff   binary
+*.woff2  binary

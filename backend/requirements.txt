@@ -1,0 +1,32 @@
+# MigraPatrón IA - backend
+# Instalar con:  pip install -r requirements.txt
+
+# ----------------------------------------------------------------- web
+Django==6.1.1
+djangorestframework==3.18.1
+djangorestframework-simplejwt==5.5.1
+drf-spectacular==0.30.0
+django-cors-headers==4.9.0
+python-decouple==3.8
+
+# ----------------------------------------------------------------- datos
+psycopg[binary]==3.3.5
+
+# ----------------------------------------------------------------- motor de patrones
+# Estas cuatro son el núcleo de M2. La descarga es grande (~120 MB): si la
+# conexión es lenta, conviene instalarlas aparte y con paciencia.
+pandas>=2.3,<3.0
+numpy>=2.1,<3.0
+scikit-learn>=1.6,<2.0
+scipy>=1.14,<2.0
+mlxtend>=0.23,<0.24
+
+# ----------------------------------------------------------------- reporte
+reportlab>=4.2,<5.0
+
+# ----------------------------------------------------------------- calidad
+pytest>=8.3
+pytest-django>=4.9
+pytest-cov>=6.0
+ruff>=0.8
+black>=24.10

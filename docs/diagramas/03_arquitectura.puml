@@ -1,0 +1,101 @@
+@startuml migrapatron_arquitectura
+title MigraPatron IA - Vista de componentes
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #4B3F8C
+}
+skinparam database {
+  BackgroundColor #EEEBF7
+  BorderColor #4B3F8C
+}
+skinparam node {
+  BackgroundColor #F7F6FB
+  BorderColor #C9C3E0
+}
+
+actor Paciente as PAC
+actor "Medico" as MED
+
+node "Dispositivo movil  ·  Flutter 3 / Dart 3" as MOVIL {
+  component "Pantallas\n(acceso, bitacora, episodios,\nhallazgos, reporte)" as UI
+  component "Estado de la app\n(provider)" as ESTADO
+  component "Cliente API\n(dio + interceptor JWT)" as API_CLI
+  component "Almacen seguro\n(flutter_secure_storage)" as SEC
+  database "Cache local\nSQLite (sqflite)" as LOCAL
+  component "Cola de sincronizacion" as COLA
+}
+
+node "Servidor  ·  Python 3.14 / Django 6.1 + DRF" as BACK {
+  component "API REST\n(DRF + drf-spectacular)" as API
+  component "Autenticacion JWT\n(SimpleJWT)" as AUTH
+  component "App cuentas" as APP_C
+  component "App bitacora" as APP_B
+  component "App analisis" as APP_A
+
+  package "Motor de patrones (nucleo)" as MOTOR {
+    component "discretizador.py" as DISC
+    component "apriori.py\n(mlxtend)" as APRI
+    component "arbol.py\n(scikit-learn)" as ARBOL
+    component "correlacion.py\n(scipy)" as CORR
+    component "riesgo.py" as RIESGO
+    component "explicador.py" as EXPL
+  }
+
+  component "Generador de datos\nsinteticos" as SINT
+  component "Generador de reporte\n(PDF / texto)" as REP
+}
+
+database "PostgreSQL 16" as PG
+
+PAC --> UI
+UI --> ESTADO
+ESTADO --> API_CLI
+ESTADO --> LOCAL
+API_CLI --> SEC
+COLA --> API_CLI
+LOCAL --> COLA
+
+API_CLI --> API : HTTPS / JSON\nAuthorization: Bearer
+
+API --> AUTH
+API --> APP_C
+API --> APP_B
+API --> APP_A
+
+APP_A --> DISC
+DISC --> APRI
+DISC --> ARBOL
+DISC --> CORR
+APRI --> EXPL
+ARBOL --> EXPL
+CORR --> EXPL
+EXPL --> RIESGO
+APP_A --> REP
+
+SINT --> APP_B
+
+APP_C --> PG
+APP_B --> PG
+APP_A --> PG
+
+REP --> MED : resumen clinico\n(PDF compartido por el paciente)
+
+note right of MOTOR
+  Todo el motor es Python puro sobre
+  DataFrames: sin estado, sin I/O propio.
+  Recibe un DataFrame y devuelve hallazgos.
+  Por eso se cubre con pruebas unitarias
+  al 90% y se valida con datasets de oraculo.
+end note
+
+note bottom of LOCAL
+  La bitacora se guarda primero en SQLite
+  y luego se envia. Si no hay red el registro
+  no se pierde: queda en la cola y se
+  reintenta al recuperar conexion.
+end note
+
+@enduml

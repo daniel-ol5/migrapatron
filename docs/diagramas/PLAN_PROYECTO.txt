@@ -1,0 +1,2085 @@
+================================================================================
+
+                          M I G R A P A T R O N   I A
+
+              Mineria de datos explicable para pacientes con migrana
+
+                          PLAN DE PROYECTO - SCRUM
+                     Materia: Ingenieria de la Calidad
+                     Version 1.0 - 17 de septiembre de 2026
+
+================================================================================
+
+RESUMEN
+-------
+MigraPatron IA analiza el diario personal de un paciente con migrana y descubre
+que factores se repitieron antes de sus episodios. No diagnostica: encuentra
+asociaciones en los datos del propio paciente, las explica con numeros y con
+palabras, y prepara un resumen que el paciente lleva a consulta.
+
+    Modulo a construir ..... Modulo de Inteligencia de Patrones
+    Equipo ................. 4 personas (2 nivel medio, 2 nivel inicial)
+    Duracion ............... 3 sprints x 3 semanas = 9 semanas
+    Casos de uso ........... 13
+    Req. no funcionales .... 10
+    Reglas de negocio ......  7
+    Historias de usuario ... 21  (103 puntos)
+    Velocidad objetivo ..... 31 puntos por sprint
+
+CONTENIDO
+---------
+    01. Decisiones de arranque
+    02. El modulo nucleo (alcance)
+    03. Arquitectura y stack tecnologico
+    04. Casos de uso y requisitos
+    05. Modelo de datos
+    06. Como funciona el motor
+    07. Historias de usuario
+    08. Plan de sprints
+    09. Equipo, roles y ceremonias
+    10. Plan de calidad
+    11. API y estructura del repositorio
+    12. Semana 1 - checklist de arranque
+    ANEXO A. Diagramas PlantUML
+    ANEXO B. Esquema de base de datos en PlantUML
+
+
+================================================================================
+01. DECISIONES DE ARRANQUE
+================================================================================
+
+Tres decisiones cierran el diseno antes de escribir codigo. Quedan registradas
+porque en Ingenieria de la Calidad hay que poder justificar por que el sistema
+es asi y no de otra forma.
+
+
+DECISION 1 - Donde corre el motor de analisis
+    ELEGIDO: Backend Python + API REST
+
+    Por que:
+      - scikit-learn, mlxtend y pandas son maduros para Apriori y arboles de
+        decision. Reimplementarlos en Dart seria trabajo perdido.
+      - Corregir o reentrenar el algoritmo no obliga a publicar una version
+        nueva de la app en la tienda.
+      - Reparte el trabajo de 4 personas en dos frentes paralelos (backend y
+        movil) en vez de amontonar a todos en Flutter.
+
+    Que cuesta:
+      - Se pierde el "todo local / Edge AI".
+      - Se compensa con cache SQLite en el movil: la bitacora se guarda
+        offline y se sincroniza despues (HU-19).
+
+
+DECISION 2 - Base del codigo movil
+    ELEGIDO: App propia en Flutter, desde cero
+
+    Por que:
+      - La cobertura de pruebas, la deuda tecnica y las metricas de SonarQube
+        miden codigo del equipo, no codigo heredado. Para esta materia eso es
+        determinante: son las metricas que hay que defender.
+      - Sin obligaciones de licencia GPL-3.0, que un fork de Migraine Log
+        arrastraria a todo el proyecto.
+      - Entender una base de codigo ajena es duro para los dos integrantes de
+        nivel inicial; escribir la propia es mas lento pero formativo.
+
+    Que cuesta:
+      - Aproximadamente una semana extra de UI. Absorbida dentro del Sprint 1.
+
+
+DECISION 3 - Cadencia
+    ELEGIDO: 3 sprints de 3 semanas (9 semanas)
+
+    Por que:
+      - Tres entregables demostrables ante el docente: capturar, analizar,
+        explicar.
+      - Menos ceremonias que 4 sprints de 2 semanas, mas margen por sprint.
+
+    Que cuesta:
+      - No hay Sprint 0. El andamiaje tecnico entra como historia HU-00 dentro
+        del Sprint 1.
+
+
+ !! CORRECCION OBLIGATORIA AL DOCUMENTO ORIGINAL !!
+
+    La propuesta original menciona "Edge AI / procesamiento local" como
+    tecnologia emergente. Con backend eso ya no aplica. La tecnologia
+    emergente que sostiene el proyecto pasa a ser:
+
+        IA EXPLICABLE (XAI) APLICADA A MINERIA DE PATRONES PERSONALES
+
+    que ademas es la parte realmente novedosa. Hay que corregirlo en el
+    documento de la materia antes de entregarlo.
+
+
+================================================================================
+02. EL MODULO NUCLEO
+================================================================================
+
+De todo MigraPatron se implementa un solo modulo completo, de extremo a
+extremo: el MODULO DE INTELIGENCIA DE PATRONES. Se acompana unicamente de lo
+que ese modulo necesita para existir y para poder probarse.
+
+
+LOS TRES SUBMODULOS DEL NUCLEO
+------------------------------
+
+  M1 - CAPTURA ESTRUCTURADA
+       Bitacora diaria + registro de episodios.
+       Por que es imprescindible: sin datos estructurados y fechados no hay
+       mineria posible. Es la materia prima del modulo.
+
+  M2 - MOTOR DE PATRONES
+       Apriori, arbol de decision, correlacion temporal, nivel de riesgo.
+       Por que es imprescindible: es EL diferencial del proyecto. Un diario
+       cualquiera guarda fechas; esto encuentra combinaciones.
+
+  M3 - EXPLICACION Y REPORTE
+       Hallazgos en lenguaje natural + resumen clinico.
+       Por que es imprescindible: sin explicacion es una caja negra, y una
+       caja negra no sirve en salud. Aqui vive la "X" de XAI.
+
+
+MODULOS DE SOPORTE (minimos, solo lo que el nucleo necesita)
+-----------------------------------------------------------
+
+  M0 - ACCESO Y PERFIL    Registro, login JWT, perfil clinico, consentimiento.
+
+  El catalogo de factores y el generador de datos sinteticos NO son un
+  modulo funcional: son configuracion (se carga por seed en HU-01) y una
+  herramienta interna de pruebas (HU-08). Por eso no tienen casos de uso.
+
+
+ALCANCE DE LAS 9 SEMANAS
+------------------------
+
+  ENTRA:
+    [x] Registro, login JWT y perfil clinico con consentimiento explicito
+    [x] Bitacora diaria de 11 factores + alimentos disparadores
+    [x] Episodios: inicio, fin, EVA 1-10, aura, localizacion, sintomas,
+        medicacion, minutos hasta el alivio
+    [x] Historial en calendario y edicion de registros
+    [x] Motor de analisis con ventana de retraso configurable (0-2 dias)
+    [x] Reglas de asociacion con soporte, confianza y lift
+    [x] Arbol de decision de profundidad <= 3 traducido a reglas legibles
+    [x] Significancia estadistica por factor (chi-cuadrado / Fisher)
+    [x] Nivel de riesgo diario: bajo / medio / alto
+    [x] Hallazgos explicados con evidencia y nivel de confianza
+    [x] Panel de tendencias y resumen clinico exportable
+    [x] Cache local SQLite con cola de reintento
+    [x] Generador de datasets sinteticos con patron conocido
+
+  NO ENTRA:
+    [ ] Cuenta de medico dentro del sistema (el paciente comparte un PDF)
+    [ ] Notificaciones push y recordatorios
+    [ ] Integracion con wearables, Google Fit o Apple Health
+    [ ] Datos de clima, presion barometrica o geolocalizacion
+    [ ] Modelo predictivo "va a dolerte manana"
+    [ ] Multiples idiomas
+    [ ] Modelos federados o entrenamiento con datos de otros pacientes
+    [ ] Recomendacion de medicacion o de tratamiento
+
+
+LIMITE DECLARADO DEL PRODUCTO  (va escrito dentro de la app)
+------------------------------------------------------------
+  MigraPatron NO diagnostica, NO determina causas y NO recomienda medicacion.
+  Muestra asociaciones estadisticas en los datos del propio paciente.
+
+  Toda pantalla de hallazgos lleva de forma permanente la leyenda:
+
+      "Una asociacion no demuestra causalidad.
+       Comenta estos resultados con tu medico."
+
+  Esto no es letra chica legal: es un REQUISITO FUNCIONAL VERIFICABLE, con su
+  historia de usuario (HU-15) y su caso de prueba.
+
+
+================================================================================
+03. ARQUITECTURA Y STACK TECNOLOGICO
+================================================================================
+
+Tres capas, una responsabilidad cada una. El motor es Python puro sobre
+DataFrames -sin base de datos, sin red, sin estado- y por eso se puede probar
+exhaustivamente.
+
+
+    Paciente
+       |
+       v
+  +----------------------------------------------------+
+  |  DISPOSITIVO MOVIL  -  Flutter 3 / Dart 3          |
+  |                                                    |
+  |   Pantallas --> Estado (provider) --> Cliente API  |
+  |                      |                     ^       |
+  |                      v                     |       |
+  |               Cache SQLite --> Cola de sincroniz.  |
+  +----------------------------------------------------+
+       |  HTTPS / JSON    Authorization: Bearer <token>
+       v
+  +----------------------------------------------------+
+  |  SERVIDOR  -  Python 3.14 / Django 6.1 + DRF       |
+  |                                                    |
+  |   API REST --> cuentas | bitacora | analisis       |
+  |                                     |              |
+  |         +---------------------------v-----------+  |
+  |         |  MOTOR DE PATRONES  (nucleo)          |  |
+  |         |    discretizador.py                   |  |
+  |         |    apriori.py       (mlxtend)         |  |
+  |         |    arbol.py         (scikit-learn)    |  |
+  |         |    correlacion.py   (scipy)           |  |
+  |         |    explicador.py                      |  |
+  |         |    riesgo.py                          |  |
+  |         +---------------------------------------+  |
+  +----------------------------------------------------+
+       |
+       v
+  +----------------------------------------------------+
+  |  PostgreSQL 16                                     |
+  +----------------------------------------------------+
+
+  El resumen clinico en PDF sale del servidor, lo descarga el paciente y se lo
+  muestra al medico. El medico NO tiene cuenta en el sistema.
+
+  Diagrama completo: docs/diagramas/03_arquitectura.puml
+
+
+STACK - CAPA MOVIL
+------------------
+  Framework      Flutter 3.x / Dart 3
+                 Un solo codigo para Android e iOS. Es lo que propone la idea
+                 original.
+
+  Estado         provider
+                 Eleccion deliberada frente a Riverpod o BLoC: la curva de
+                 aprendizaje es la mas baja y dos integrantes son de nivel
+                 inicial. Mantenibilidad real > elegancia teorica.
+
+  HTTP           dio
+                 Interceptores para adjuntar el JWT y refrescarlo sin repetir
+                 codigo en cada pantalla.
+
+  Persistencia   sqflite  +  flutter_secure_storage
+                 SQLite para la cache offline. Almacen cifrado del sistema
+                 para los tokens: son datos de salud, NO van en
+                 SharedPreferences.
+
+  Graficos       fl_chart
+                 Panel de tendencias: episodios por mes, intensidad media,
+                 factores mas frecuentes.
+
+
+STACK - CAPA BACKEND
+--------------------
+  Lenguaje       Python 3.14 (minimo 3.12)
+
+  Framework      Django 6.1 + Django REST Framework 3.18
+                 DRF trae serializadores, permisos, paginacion y admin listos.
+                 El equipo ya tiene experiencia previa con DRF.
+
+  Auth           djangorestframework-simplejwt
+                 Access de 15 min + refresh de 30 dias con rotacion y
+                 blacklist.
+
+  Mineria        mlxtend + scikit-learn + pandas + scipy
+                 mlxtend.frequent_patterns implementa apriori() y
+                 association_rules() con soporte, confianza y lift ya
+                 calculados.   >> NO reimplementar Apriori a mano. <<
+
+  Docs API       drf-spectacular
+                 OpenAPI 3 generado del codigo: la documentacion no se
+                 desactualiza.
+
+  Reporte        reportlab
+                 PDF del resumen clinico generado en servidor.
+
+
+STACK - CAPA DE DATOS
+---------------------
+  PostgreSQL 16
+                 Tipos JSONB, ENUM e INET nativos. Restricciones CHECK reales.
+
+
+STACK - CALIDAD Y DEVOPS
+------------------------
+  Pruebas        pytest + pytest-cov       (backend)
+                 flutter_test + mocktail   (movil)
+                 integration_test          (extremo a extremo)
+
+  Estatico       SonarCloud  (gratuito en repositorios publicos)
+                 ruff + black              (Python)
+                 dart analyze              (Dart)
+
+  CI/CD          GitHub Actions
+                 Lint + pruebas + cobertura + Sonar en cada Pull Request.
+                 Sin PR verde no hay merge.
+
+  Gestion        GitHub Projects (tablero SCRUM)
+                 Las historias viven junto al codigo; el burndown sale del
+                 propio tablero.
+
+  Prototipado    Jupyter + pandas
+                 El algoritmo se valida en un notebook con datos sinteticos
+                 ANTES de portarlo al servicio Django.
+
+  Diseno         Figma (plan gratuito)
+  API manual     Postman (coleccion versionada en el repo)
+
+
+================================================================================
+04. CASOS DE USO Y REQUISITOS
+================================================================================
+
+13 casos de uso en 4 paquetes. M1, M2 y M3 son el modulo nucleo; M0 es el
+soporte minimo que el nucleo necesita para funcionar.
+
+
+CRITERIO QUE SE APLICO PARA REDUCIR EL MODELO
+---------------------------------------------
+Un caso de uso es una META DE UN ACTOR que termina en valor observable, no un
+paso interno del sistema. Con ese criterio se eliminaron once casos de uso de
+la primera version del modelo:
+
+  Validar suficiencia / Apriori / Arbol de decision / Correlacion temporal
+      Los incluia un unico caso de uso (el analisis). Un <<include>> que usa
+      un solo caso de uso no es reutilizacion: es DESCOMPOSICION FUNCIONAL,
+      el antipatron mas comun en los modelos de casos de uso. Son pasos del
+      flujo principal de CU-08 y estan descritos ahi y en la seccion 06.
+
+  Sincronizar registros offline
+      El paciente nunca tiene la meta de "sincronizar". Su meta es registrar
+      su dia; que eso funcione sin conexion es un ATRIBUTO DE FIABILIDAD.
+      Pasa a RNF-04.
+
+  Generar dataset sintetico / Administrar catalogo de factores
+      No son funciones del producto: son herramientas internas del equipo. El
+      generador vive como historia tecnica HU-08 y el catalogo se carga por
+      seed en HU-01. Un actor "Administrador" que no existe en el producto no
+      justifica dos casos de uso.
+
+  Editar bitacora / Editar o eliminar episodio / Exportar resumen
+      Misma meta que el caso base, distinta pulsacion. Pasan a flujos alternos
+      del caso de uso correspondiente.
+
+  Tambien desaparece el actor "Motor de Analisis": esta DENTRO de la frontera
+  del sistema, y lo que esta dentro de la frontera no es un actor.
+
+  El resultado es un modelo con 13 casos de uso y UNA sola relacion
+  <<extend>>. Que casi no haya relaciones no es una carencia: es la senal de
+  que cada caso de uso se sostiene solo.
+
+
+ACTORES
+-------
+  PACIENTE          (principal)
+      El unico actor que opera el sistema. Registra su bitacora y sus
+      episodios, pide el analisis, lee los hallazgos y genera el resumen para
+      la consulta.
+
+  MEDICO TRATANTE   (externo, receptor)
+      Solo recibe el resumen clinico en PDF que el paciente le comparte.
+      NO tiene cuenta ni opera el sistema en este alcance.
+
+
+CATALOGO DE CASOS DE USO
+------------------------
+
+  ID      CASO DE USO                                ACTOR      MOD  PRIOR.
+  ------  -----------------------------------------  --------   ---  ------
+  CU-01   Registrarse                                Paciente   M0   Must
+  CU-02   Iniciar sesion                             Paciente   M0   Must
+  CU-03   Cerrar sesion                              Paciente   M0   Should
+  CU-04   Gestionar perfil clinico y consentimiento  Paciente   M0   Must
+  ------  -----------------------------------------  --------   ---  ------
+  CU-05   Registrar bitacora del dia                 Paciente   M1   Must
+  CU-06   Registrar episodio de migrana              Paciente   M1   Must
+  CU-07   Consultar historial                        Paciente   M1   Must
+  ------  -----------------------------------------  --------   ---  ------
+  CU-08   Analizar mis patrones                      Paciente   M2   Must
+  CU-09   Consultar el riesgo del dia                Paciente   M2   Should
+  ------  -----------------------------------------  --------   ---  ------
+  CU-10   Consultar hallazgos explicados             Paciente   M3   Must
+  CU-11   Valorar la utilidad de un hallazgo         Paciente   M3   Could
+  CU-12   Consultar panel de tendencias              Paciente   M3   Could
+  CU-13   Generar y compartir resumen clinico        Paciente   M3   Must
+
+
+RELACIONES ENTRE CASOS DE USO
+-----------------------------
+  CU-11  extend  CU-10
+      Unica relacion del modelo. Valorar un hallazgo es comportamiento
+      OPCIONAL que se dispara desde un punto de extension dentro de CU-10:
+      el paciente puede consultar sus hallazgos sin valorar ninguno.
+
+  LO QUE NO SON RELACIONES, AUNQUE LO PAREZCAN:
+    - "CU-08 requiere consentimiento aceptado" es una PRECONDICION (RN-01),
+      no un <<include>> de CU-04.
+    - "El episodio se ancla al registro del dia" es una POSTCONDICION del
+      sistema (RN-05), no un <<include>> de CU-05.
+    - "El resumen usa el ultimo analisis" es una PRECONDICION de CU-13
+      (RN-06), no un <<include>> de CU-08.
+
+  Diagrama completo: docs/diagramas/01_casos_de_uso.puml
+
+
+CU-08 EN DETALLE - EL CASO DE USO CENTRAL
+-----------------------------------------
+
+  Nombre            Analizar mis patrones
+  Actor             Paciente
+  Modulo            M2 - Analisis de patrones (nucleo)
+
+  Precondicion      Sesion iniciada y consentimiento de analisis aceptado
+                    (perfil_clinico.consentimiento_analisis = true).   [RN-01]
+
+  Disparador        El paciente pulsa "Analizar mis patrones", o se cumple el
+                    recalculo automatico tras registrar un nuevo episodio.
+
+  FLUJO PRINCIPAL
+    1. El sistema lee los registros del periodo (por defecto 90 dias).
+    2. Valida que haya al menos 14 dias completos y 3 episodios.       [RN-02]
+    3. Construye la matriz uniendo el dia D con el dia D-1 (ventana de
+       retraso configurable, lag_dias).
+    4. Discretiza cada factor en items segun catalogo_factor y
+       regla_discretizacion.
+    5. Busca conjuntos frecuentes y genera reglas de asociacion con Apriori,
+       conservando solo las que tienen MIGRANA_SI como consecuente.
+    6. Entrena un arbol de decision de profundidad <= 3 y traduce cada camino
+       raiz-hoja a una regla legible.
+    7. Calcula la significancia de cada factor con chi-cuadrado, o test exacto
+       de Fisher cuando alguna celda tiene menos de 5 casos.
+    8. Filtra por lift, deduplica reglas que se implican entre si y ordena por
+       relevancia.                                                     [RN-03]
+    9. Compone la explicacion en lenguaje natural de cada hallazgo y le asigna
+       su nivel de confianza segun el numero de observaciones.         [RN-04]
+   10. Persiste el analisis, sus hallazgos y el riesgo del dia.
+   11. Devuelve la lista ordenada al paciente.
+
+    Los pasos 4 a 9 son el motor de patrones. Su funcionamiento interno esta
+    detallado en la seccion 06.
+
+  FLUJO ALTERNO A - Datos insuficientes
+    En el paso 2, si hay menos de 14 dias completos o menos de 3 episodios:
+    guarda el analisis con estado DATOS_INSUFICIENTES, NO muestra ningun
+    hallazgo e indica al paciente cuanto le falta registrar.
+
+  FLUJO ALTERNO B - Sin patrones
+    Si ninguna regla supera los umbrales: estado OK con cero hallazgos y el
+    mensaje "Todavia no aparece un patron claro en tus datos".
+
+  FLUJO ALTERNO C - Sin consentimiento
+    Si el consentimiento no esta aceptado, el sistema no ejecuta el analisis y
+    lleva al paciente a CU-04 explicando para que se usaran sus datos.
+
+  FLUJO DE EXCEPCION - Error del motor
+    Estado ERROR, se registra en evento_auditoria, el paciente ve el ultimo
+    analisis valido y un aviso de reintentar.
+
+  Postcondicion     Existe un registro en 'analisis', N filas en 'hallazgo' y
+                    el 'riesgo_diario' de hoy actualizado.
+
+  Req. asociados    RNF-01 (rendimiento), RNF-07 (explicabilidad),
+                    RNF-08 (suficiencia de datos)
+
+  Diagrama de secuencia: docs/diagramas/04_secuencia_analisis.puml
+
+
+REQUISITOS NO FUNCIONALES
+-------------------------
+Aqui viven las exigencias que no son metas de un actor pero que el sistema
+debe cumplir. Cada uno esta mapeado a una caracteristica de ISO/IEC 25010 y
+tiene una forma de verificarse: un RNF que no se puede medir no es un
+requisito, es un deseo.
+
+  ID       REQUISITO                              ISO 25010      VERIFICACION
+  -------  -------------------------------------  -------------  ------------
+  RNF-01   El analisis completo responde en menos  Eficiencia     pytest-
+           de 3 s con 365 dias, 60 episodios y                    benchmark
+           12 factores.                                           (O-07)
+
+  RNF-02   Cualquier pantalla de captura responde  Eficiencia     Medicion en
+           en menos de 300 ms sobre datos locales.                la Review
+
+  RNF-03   Un paciente que ya uso la pantalla      Usabilidad     Prueba con
+           registra un dia completo en menos de                   5 usuarios
+           60 s. Escala SUS >= 70.                                + SUS
+
+  RNF-04   La bitacora y los episodios se          Fiabilidad     Prueba de
+           registran SIN CONEXION y se sincronizan (tolerancia    HU-19
+           al recuperarla. Cero registros          a fallos)
+           perdidos por caida de red.
+
+  RNF-05   Los tokens se guardan en el almacen     Seguridad      Pruebas de
+           cifrado del sistema. Todo endpoint      (confidencia-  integracion
+           exige Bearer. Ningun usuario accede a   lidad)
+           datos de otro.
+
+  RNF-06   Toda lectura o escritura de datos       Seguridad      Revision de
+           clinicos queda registrada en            (responsabi-   evento_
+           evento_auditoria.                       lidad)         auditoria
+
+  RNF-07   Ningun hallazgo se muestra sin soporte, Adecuacion     HU-15 +
+           confianza, lift, periodo analizado,     funcional      inspeccion
+           numero de episodios relacionados y la                  de UI
+           advertencia de no causalidad.
+
+  RNF-08   Con menos de 14 dias completos o menos  Adecuacion     O-04, O-05,
+           de 3 episodios el sistema NO emite      funcional      O-06
+           ningun hallazgo.
+
+  RNF-09   Cobertura >= 90% en el paquete motor/,  Mantenibili-   SonarCloud
+           duplicacion < 3%, calificacion A de     dad            + pytest-cov
+           deuda tecnica.
+
+  RNF-10   La app funciona en Android 8.0+ e       Portabilidad   Prueba en
+           iOS 13+.                                               2 dispositivos
+
+  RNF-04 y RNF-07 merecen atencion especial: los dos eran casos de uso en la
+  primera version del modelo. Como RNF son mas utiles, porque ahora tienen
+  metrica y metodo de verificacion, que es lo que un caso de uso no da.
+
+
+REGLAS DE NEGOCIO
+-----------------
+Restricciones del dominio que el sistema aplica siempre, sin importar desde
+que caso de uso se llegue.
+
+  RN-01   Sin consentimiento de analisis aceptado, CU-08 no se ejecuta.
+          El consentimiento se guarda con su fecha en perfil_clinico.
+
+  RN-02   SUFICIENCIA DE DATOS. Se necesitan al menos 14 dias de bitacora
+          completa y 3 episodios registrados para emitir hallazgos.
+          Por debajo de eso el analisis devuelve DATOS_INSUFICIENTES.
+
+  RN-03   UMBRALES DE RELEVANCIA. Una regla solo se presenta si cumple
+          soporte >= 0.10, confianza >= 0.60, lift >= 1.20 y tiene como
+          maximo 3 items en el antecedente. Se muestran a lo sumo 10
+          hallazgos.
+
+  RN-04   NIVEL DE CONFIANZA POR NUMERO DE OBSERVACIONES, no por fuerza de
+          la regla:
+              ALTA   >= 10 episodios relacionados  y  p < 0.05
+              MEDIA  >=  5 episodios relacionados  y  p < 0.10
+              BAJA   el resto (con advertencia reforzada)
+
+  RN-05   Un unico registro de bitacora por usuario y fecha. Un episodio se
+          ancla automaticamente al registro del dia en que empezo.
+
+  RN-06   Un resumen clinico siempre referencia el analisis que lo produjo.
+          Los hallazgos no se editan nunca: se regeneran en una corrida
+          nueva, para que cada resultado sea trazable a sus parametros.
+
+  RN-07   El sistema no emite juicios causales ni predictivos. Ningun texto
+          mostrado al paciente afirma que un factor causa migrana ni que va a
+          tener un episodio.
+
+
+================================================================================
+05. MODELO DE DATOS
+================================================================================
+
+17 tablas en PostgreSQL. La decision de diseno mas importante esta en como se
+conectan la bitacora y el motor.
+
+
+LA DECISION DE DISENO CLAVE
+---------------------------
+
+Hay dos formas habituales de guardar factores variables. Una tabla EAV
+generica (entidad-atributo-valor) es flexible pero dificil de validar y de
+entender. Columnas fijas son simples pero obligan a tocar el motor cada vez
+que se agrega un factor. Aqui se combinan las dos:
+
+  registro_diario        Columnas fijas, tipadas, con CHECK de rango.
+                         La usan la app movil y los serializadores.
+                         Un formulario plano, validacion trivial, consultas
+                         rapidas. Facil para los integrantes de nivel inicial.
+
+  catalogo_factor        Metadatos: que columna es cada factor, de que tipo,
+                         con que unidad.
+                         La usa el motor: itera el catalogo y lee cada columna
+                         por su nombre. NO tiene los factores escritos a mano.
+
+  regla_discretizacion   Como convertir un valor crudo en un item, MAS la
+                         frase en espanol.
+                         La usan el discretizador y el explicador. Agregar un
+                         factor nuevo es insertar filas, no reescribir el
+                         algoritmo.
+
+  POR QUE IMPORTA PARA LA MATERIA
+  El campo regla_discretizacion.descripcion_humana (por ejemplo "durmio menos
+  de 6 horas") es lo que hace que la explicabilidad sea un DATO y no texto
+  incrustado en el codigo. El explicador compone las frases a partir del
+  catalogo, asi que la calidad de las explicaciones se puede revisar,
+  versionar y probar sin tocar Python.
+
+
+LAS TABLAS, POR MODULO
+----------------------
+
+  M0 - IDENTIDAD
+  --------------
+  usuario
+      Credenciales y datos basicos del paciente.
+      Campos: id, email, password_hash, nombre, apellido, fecha_nacimiento,
+              sexo, zona_horaria, fecha_registro, ultimo_acceso, activo
+      Restricciones: UQ(email)
+
+  perfil_clinico
+      Contexto clinico: anios con migrana, tipo diagnosticado, medicacion
+      habitual y el CONSENTIMIENTO DE ANALISIS con su fecha.
+      Campos: id, usuario_id, anios_con_migrana, diagnostico_previo,
+              tipo_migrana, medicacion_habitual, ciclo_menstrual_aplica,
+              consentimiento_analisis, fecha_consentimiento
+      Restricciones: 1:1 con usuario. Sin consentimiento, CU-08 se rechaza.
+
+
+  M4 - CATALOGOS Y METADATOS DEL MOTOR
+  ------------------------------------
+  catalogo_factor
+      Los 11 factores registrables: codigo, columna que los contiene,
+      etiqueta, tipo, unidad, rango valido y si admite ventana de retraso.
+      Campos: id, codigo, nombre_campo, etiqueta, tipo_dato, unidad,
+              valor_min, valor_max, aplica_lag, activo, orden
+      Restricciones: UQ(codigo)
+
+  regla_discretizacion
+      Cortes de cada factor: operador, limites y la frase en espanol que usara
+      la explicacion.
+      Campos: id, factor_id, etiqueta_item, operador, valor_min, valor_max,
+              valor_texto, descripcion_humana, orden
+      Restricciones: UQ(factor_id, etiqueta_item)
+
+  alimento
+      Catalogo de posibles disparadores alimentarios agrupados: lacteo,
+      embutido, chocolate, cafeina, alcohol, glutamato, citrico, edulcorante.
+      Campos: id, codigo, nombre, grupo, activo
+      Restricciones: UQ(codigo)
+
+  sintoma
+      Catalogo: nausea, vomito, fotofobia, fonofobia, aura visual, hormigueo,
+      rigidez cervical, mareo.
+      Campos: id, codigo, nombre, activo
+      Restricciones: UQ(codigo)
+
+  evento_auditoria
+      Quien hizo que y cuando. Son datos de salud: el rastro es un requisito,
+      no un extra.
+      Campos: id, usuario_id, accion, entidad, entidad_id, detalle, ip,
+              ocurrido_en
+      Restricciones: solo insercion, nunca actualizacion.
+
+
+  M1 - CAPTURA
+  ------------
+  registro_diario
+      Un dia de bitacora completo.
+      Campos: id, usuario_id, fecha, horas_sueno, calidad_sueno, hidratacion,
+              comidas_omitidas, estres_percibido, horas_pantalla,
+              minutos_actividad, cafeina_tazas, consumo_alcohol, fase_ciclo,
+              completado, origen, creado_en, actualizado_en
+      Restricciones: UQ(usuario_id, fecha) -> un registro por dia, sin
+                     duplicados.  IDX(usuario_id, fecha DESC)
+
+  registro_alimento
+      Que comio ese dia y cuantas porciones. Relacion N:M.
+      Campos: id, registro_diario_id, alimento_id, porciones
+      Restricciones: UQ(registro_diario_id, alimento_id)
+
+  episodio_migrana
+      El episodio completo.
+      Campos: id, usuario_id, registro_diario_id, inicio, fin, duracion_min,
+              intensidad_eva, localizacion, tuvo_aura, medicacion_tomada,
+              minutos_hasta_alivio, alivio_percibido, limito_actividad,
+              notas, creado_en
+      Restricciones: CHECK(intensidad_eva BETWEEN 1 AND 10)
+                     FK opcional al registro_diario de ese dia
+                     IDX(usuario_id, inicio DESC)
+
+  episodio_sintoma
+      Sintomas presentes en cada episodio. Relacion N:M.
+      Campos: id, episodio_id, sintoma_id
+      Restricciones: UQ(episodio_id, sintoma_id)
+
+
+  M2 - ANALISIS
+  -------------
+  analisis
+      Una corrida del motor.
+      Campos: id, usuario_id, ejecutado_en, periodo_inicio, periodo_fin,
+              dias_analizados, episodios_analizados, lag_dias, version_motor,
+              parametros (JSONB), estado, mensaje_estado, duracion_ms
+      Restricciones: estado en {OK, DATOS_INSUFICIENTES, ERROR}
+                     version_motor permite comparar corridas
+                     IDX(usuario_id, ejecutado_en DESC)
+
+  hallazgo
+      Cada patron encontrado.
+      Campos: id, analisis_id, tipo, antecedente (JSONB), soporte, confianza,
+              lift, p_valor, episodios_relacionados, total_episodios,
+              nivel_confianza, texto_explicacion, ranking
+      Restricciones: hijo de 'analisis'. Los hallazgos nunca se editan, se
+                     regeneran. Asi queda trazabilidad historica.
+
+  valoracion_hallazgo
+      El paciente marca si un hallazgo le resulto util.
+      Campos: id, hallazgo_id, usuario_id, util, comentario, creado_en
+      Restricciones: UQ(hallazgo_id, usuario_id)
+
+  riesgo_diario
+      Nivel bajo/medio/alto de hoy, score numerico y factores activos.
+      Campos: id, usuario_id, fecha, nivel, score, factores_activos (JSONB),
+              analisis_id, calculado_en
+      Restricciones: UQ(usuario_id, fecha) -> se hace UPSERT
+
+
+  M3 - REPORTE
+  ------------
+  reporte_clinico
+      El resumen generado para la consulta.
+      Campos: id, usuario_id, analisis_id, generado_en, periodo_inicio,
+              periodo_fin, resumen, formato, hash_contenido, veces_compartido
+      Restricciones: FK obligatoria a 'analisis'. Todo reporte se puede
+                     rastrear hasta la corrida que lo produjo.
+
+
+POR QUE 'hallazgo' CUELGA DE 'analisis' Y NO DEL USUARIO
+--------------------------------------------------------
+Un hallazgo solo significa algo en el contexto de la corrida que lo produjo:
+el periodo, los umbrales y la version del motor.
+
+Si los hallazgos colgaran del usuario, al cambiar un umbral quedarian
+mezclados resultados de criterios distintos y no se podria responder "por que
+antes salia esto y ahora no".
+
+Con este diseno cada corrida es inmutable y comparable, que es exactamente lo
+que se necesita para demostrar en la materia que el motor mejoro entre el
+Sprint 2 y el Sprint 3.
+
+
+DATOS SEMILLA DEL CATALOGO - ASI SE VE EN LA PRACTICA
+-----------------------------------------------------
+
+  FACTOR              COLUMNA             ITEM              REGLA
+  ------------------  ------------------  ----------------  ---------------
+  Horas de sueno      horas_sueno         SUENO_BAJO        LT 6
+                                          SUENO_EXCESO      GT 9
+  Estres percibido    estres_percibido    ESTRES_ALTO       GTE 4
+  Comidas omitidas    comidas_omitidas    COMIDA_OMITIDA    GTE 1
+  Hidratacion         hidratacion         HIDRATACION_BAJA  EQ 'BAJA'
+  Pantallas           horas_pantalla      PANTALLA_ALTA     GTE 8
+  Actividad fisica    minutos_actividad   SEDENTARISMO      LT 15
+  Fase del ciclo      fase_ciclo          CICLO_MENSTRUAL   EQ 'MENSTRUACION'
+
+  DESCRIPCION_HUMANA de cada item:
+    SUENO_BAJO ........ "durmio menos de 6 horas"
+    SUENO_EXCESO ...... "durmio mas de 9 horas"
+    ESTRES_ALTO ....... "tuvo un nivel de estres alto"
+    COMIDA_OMITIDA .... "se salto al menos una comida"
+    HIDRATACION_BAJA .. "bebio poca agua"
+    PANTALLA_ALTA ..... "paso 8 horas o mas frente a pantallas"
+    SEDENTARISMO ...... "casi no se movio"
+    CICLO_MENSTRUAL ... "estaba menstruando"
+
+  Estas frases son las que el explicador concatena para armar el texto del
+  hallazgo. Cambiar la redaccion es un UPDATE, no un despliegue.
+
+  Esquema completo en PlantUML: ver ANEXO B
+  Archivo: docs/diagramas/02_modelo_datos.puml
+
+
+================================================================================
+06. COMO FUNCIONA EL MOTOR
+================================================================================
+
+Seis pasos, cada uno en su propio archivo y con sus propias pruebas. Este es
+el corazon del proyecto y donde se concentra el esfuerzo de calidad.
+
+
+PASO 1 - VENTANA DE RETRASO (lag_dias)
+--------------------------------------
+Un episodio del dia D rara vez lo causa lo que paso ese mismo dia: lo antecede
+lo del dia anterior. Para cada dia se construye una fila que une los factores
+de D y de D-1, y se marca si hubo migrana en D.
+
+El retraso es configurable (0, 1 o 2 dias); por defecto es 1.
+
+    fila(D) = factores(D)  U  factores(D-1) prefijados "AYER_"
+              +  MIGRANA = SI | NO
+
+
+PASO 2 - DISCRETIZACION  (discretizador.py)
+-------------------------------------------
+Apriori necesita items, no numeros. Cada valor crudo se convierte en una
+etiqueta usando regla_discretizacion. Un dia que no cumple ninguna regla de un
+factor simplemente no aporta ese item.
+
+    horas_sueno       = 5.5  -->  SUENO_BAJO
+    estres_percibido  = 4    -->  ESTRES_ALTO
+    comidas_omitidas  = 1    -->  COMIDA_OMITIDA
+    horas_pantalla    = 3.0  -->  (ningun item)
+
+
+PASO 3 - REGLAS DE ASOCIACION  (apriori.py)
+-------------------------------------------
+Con mlxtend se buscan conjuntos frecuentes y se generan reglas. Solo interesan
+las que tienen MIGRANA_SI como consecuente. Se descartan antecedentes de mas
+de 3 items: una regla de 5 condiciones no es explicable.
+
+    UMBRALES:
+      soporte    >= 0.10    el patron aparece en al menos el 10% de los dias
+      confianza  >= 0.60    cuando aparece, 6 de cada 10 veces hubo migrana
+      lift       >= 1.20    la migrana es 1.2x mas probable que por azar
+      n_items    <= 3       antecedente explicable en una frase
+
+    El LIFT es la metrica clave: sin el, un factor que ocurre todos los dias
+    (como "uso pantallas") saldria con confianza altisima aunque no tenga
+    ninguna relacion real con los episodios.
+
+
+PASO 4 - ARBOL DE DECISION  (arbol.py)
+--------------------------------------
+DecisionTreeClassifier con max_depth=3 y min_samples_leaf=5.
+
+No se usa para predecir sino para LEER sus ramas: cada camino raiz->hoja con
+clase MIGRANA_SI se traduce a una regla. Aporta combinaciones que Apriori se
+pierde por el umbral de soporte, y da la importancia relativa de cada factor.
+
+    SI sueno < 6.5 h  Y  estres >= 4  -->  migrana en 11 de 13 casos (hoja)
+
+
+PASO 5 - SIGNIFICANCIA  (correlacion.py)
+----------------------------------------
+Por cada factor se arma la tabla 2x2 (factor si/no x migrana si/no) y se
+aplica chi-cuadrado, o test exacto de Fisher cuando alguna celda tiene menos
+de 5 casos, que con pocos episodios pasa siempre.
+
+El p-valor evita presentar como patron lo que es ruido de una muestra pequena.
+
+    SUENO_BAJO     chi2 = 8.41,  p = 0.0037  -->  se conserva
+    PANTALLA_ALTA  Fisher        p = 0.42    -->  se descarta
+
+
+PASO 6 - EXPLICACION  (explicador.py)
+-------------------------------------
+Cada regla superviviente se convierte en una frase construida con las
+descripcion_humana del catalogo, mas su evidencia numerica y su nivel de
+confianza.
+
+El nivel sale del NUMERO DE OBSERVACIONES, no de la fuerza de la regla: con
+pocos datos, un lift alto sigue siendo poco confiable.
+
+    ALTA   >= 10 episodios relacionados  Y  p < 0.05
+    MEDIA  >=  5 episodios relacionados  Y  p < 0.10
+    BAJA   el resto -> se muestra con advertencia reforzada
+
+
+QUE VE EL PACIENTE AL FINAL
+---------------------------
+
+  +----------------------------------------------------------------------+
+  |  HALLAZGO 1                                      confianza: ALTA     |
+  |                                                                      |
+  |  En 9 de tus 14 episodios habias dormido menos de 6 horas el dia     |
+  |  anterior y te habias saltado al menos una comida.                   |
+  |                                                                      |
+  |  Periodo analizado: 12 jun - 10 sep 2026 (90 dias, 14 episodios)     |
+  |  Soporte 14%  ·  Confianza 75%  ·  Lift 2.4  ·  p = 0.004           |
+  |                                                                      |
+  |  Cuando esta combinacion se dio, la migrana fue 2.4 veces mas        |
+  |  probable que en un dia cualquiera.                                  |
+  |                                                                      |
+  |  >> Una asociacion no demuestra causalidad.                          |
+  |     Comenta este resultado con tu medico.                            |
+  +----------------------------------------------------------------------+
+
+
+NIVEL DE RIESGO DIARIO  (riesgo.py)
+-----------------------------------
+Al abrir la app, el paciente ve un semaforo del dia. El score suma el lift de
+cada hallazgo de confianza ALTA o MEDIA cuyos items esten activos hoy,
+normalizado sobre la suma maxima posible.
+
+  NIVEL   SCORE          QUE DICE LA APP
+  -----   ------------   ---------------------------------------------------
+  BAJO    < 0.33         "Hoy no coinciden tus factores habituales."
+  MEDIO   0.33 - 0.66    "Hoy coincide 1 de tus factores frecuentes:
+                          dormiste poco."
+  ALTO    > 0.66         "Hoy coinciden 2 de tus factores frecuentes:
+                          dormiste poco y te saltaste el desayuno."
+
+  El texto NUNCA dice "te va a doler". Describe coincidencias con el historial
+  propio del paciente, que es lo unico que los datos sostienen.
+
+
+================================================================================
+07. HISTORIAS DE USUARIO
+================================================================================
+
+21 historias, 103 puntos. Estimacion en Fibonacci con la referencia de que
+1 PUNTO = 2 a 3 HORAS EFECTIVAS de un desarrollador del equipo.
+Velocidad objetivo: 31 puntos por sprint.
+
+
+  ID      HISTORIA                                    CUBRE       PTS  SPR
+  ------  ------------------------------------------  ----------  ---  ---
+  HU-00   Repositorio, entornos y pipeline de CI      RNF-09        5  S1
+  HU-01   Esquema de BD migrado y catalogos semilla   tecnica       5  S1
+  HU-02   Cuenta e inicio de sesion (API)             CU-01,02,03   3  S1
+  HU-03   Sesion persistente en la app                CU-02         5  S1
+  HU-04   Perfil clinico y consentimiento             CU-04, RN-01  3  S1
+  HU-05   Bitacora diaria                             CU-05         8  S1
+  HU-06   Registro de episodios                       CU-06         8  S1
+  ------  ------------------------------------------  ----------  ---  ---
+  HU-07   Historial en calendario                     CU-07         5  S2
+  HU-08   Generador de datasets sinteticos            tecnica       5  S2
+  HU-09   Discretizacion por catalogo                 CU-08 p.4     5  S2
+  HU-10   Reglas de asociacion (Apriori)              CU-08 p.5     8  S2
+  HU-11   Significancia estadistica                   CU-08 p.7     3  S2
+  HU-12   Endpoint de analisis y suficiencia          CU-08, RN-02  5  S2
+  ------  ------------------------------------------  ----------  ---  ---
+  HU-13   Arbol de decision a reglas legibles         CU-08 p.6     5  S3
+  HU-14   Explicaciones en lenguaje natural           CU-10         5  S3
+  HU-15   Pantalla de hallazgos                       CU-10,RNF-07  5  S3
+  HU-16   Evidencia de un hallazgo                    CU-10, CU-11  3  S3
+  HU-17   Riesgo del dia en el inicio                 CU-09         3  S3
+  HU-18   Resumen clinico y exportacion               CU-13         5  S3
+  HU-19   Registro offline y sincronizacion           RNF-04        5  S3
+  HU-20   Panel de tendencias        [FLEXIBLE]       CU-12         4  S3
+
+  "tecnica" = historia habilitadora sin caso de uso: no la pide un actor, la
+  necesita el equipo.  "CU-08 p.N" = paso N del flujo principal de CU-08.
+
+
+REDACCION COMPLETA DE LAS HISTORIAS
+-----------------------------------
+
+HU-00  (5 pts, S1, Medio 1 + QA)
+  Como EQUIPO quiero el repositorio, los entornos y el pipeline de CI
+  configurados PARA que ninguna linea de codigo llegue a develop sin pasar
+  lint, pruebas y Quality Gate.
+
+HU-01  (5 pts, S1, Medio 1 + Bajo 2)
+  Como EQUIPO quiero el esquema de base de datos migrado y los catalogos
+  poblados PARA que todo el desarrollo posterior comparta el mismo modelo.
+
+HU-02  (3 pts, S1, Bajo 2)
+  Como PACIENTE quiero crear una cuenta e iniciar sesion PARA que mis datos de
+  salud queden protegidos y sean solo mios.
+
+HU-03  (5 pts, S1, Medio 2 + Bajo 1)
+  Como PACIENTE quiero que la app recuerde mi sesion PARA no escribir la
+  contrasena cada vez que la abro.
+
+HU-04  (3 pts, S1, Bajo 2)
+  Como PACIENTE quiero completar mi perfil clinico y aceptar el analisis de
+  mis datos PARA saber exactamente para que se usan.
+
+HU-05  (8 pts, S1, Bajo 1 + Medio 2)
+  Como PACIENTE quiero registrar mi dia en menos de un minuto PARA no
+  abandonar el habito a la semana.
+
+HU-06  (8 pts, S1, Medio 2)
+  Como PACIENTE quiero registrar un episodio con su intensidad y sintomas PARA
+  tener el detalle que despues no voy a recordar.
+
+HU-07  (5 pts, S2, Bajo 1)
+  Como PACIENTE quiero ver mi historial en un calendario PARA reconocer de un
+  vistazo mis dias sin registrar y mis episodios.
+
+HU-08  (5 pts, S2, QA + Medio 1)
+  Como EQUIPO DE QA quiero generar datasets sinteticos con un patron conocido
+  PARA poder comprobar si el motor lo descubre.
+
+HU-09  (5 pts, S2, Medio 1)
+  Como MOTOR necesito convertir los valores crudos en items segun el catalogo
+  PARA poder aplicar mineria de reglas sin tener factores escritos a mano.
+
+HU-10  (8 pts, S2, Medio 1)
+  Como PACIENTE quiero que el sistema encuentre combinaciones de factores
+  frecuentes antes de mis episodios PARA descubrir lo que yo solo no veria.
+
+HU-11  (3 pts, S2, Medio 1 + Bajo 2)
+  Como PACIENTE quiero que se descarten las coincidencias que son solo azar
+  PARA no cambiar mis habitos por un patron inventado.
+
+HU-12  (5 pts, S2, Medio 2)
+  Como PACIENTE quiero pedir el analisis desde la app y que me diga si aun no
+  tengo datos suficientes PARA saber cuanto me falta registrar.
+
+HU-13  (5 pts, S3, Medio 1)
+  Como PACIENTE quiero que el sistema tambien detecte reglas combinadas poco
+  frecuentes pero muy consistentes PARA no perder patrones que Apriori
+  descarta por soporte.
+
+HU-14  (5 pts, S3, Medio 1 + Bajo 2)
+  Como PACIENTE quiero leer los hallazgos en espanol claro y no en porcentajes
+  sueltos PARA entender que encontro el sistema.
+
+HU-15  (5 pts, S3, Medio 2 + Bajo 1)
+  Como PACIENTE quiero ver mis hallazgos ordenados con su nivel de confianza y
+  la advertencia de no causalidad PARA saber cuanto peso darle a cada uno.
+
+HU-16  (3 pts, S3, Bajo 1)
+  Como PACIENTE quiero ver que episodios concretos respaldan un hallazgo PARA
+  comprobar por mi mismo que es cierto.
+
+HU-17  (3 pts, S3, Medio 2)
+  Como PACIENTE quiero ver al abrir la app si hoy coinciden mis factores
+  habituales PARA poder corregir algo a tiempo.
+
+HU-18  (5 pts, S3, Medio 2 + Bajo 2)
+  Como PACIENTE quiero generar un resumen de mi periodo y compartirlo PARA
+  llegar a la consulta con informacion organizada.
+
+HU-19  (5 pts, S3, Bajo 1 + Medio 2)
+  Como PACIENTE quiero registrar mi dia aunque no tenga internet PARA no
+  perder el habito cuando estoy sin senal.
+
+HU-20  (4 pts, S3, Bajo 1)  [FLEXIBLE - primera en salir si baja la velocidad]
+  Como PACIENTE quiero ver graficos de mis episodios por mes y de mis factores
+  mas frecuentes PARA seguir mi evolucion.
+
+
+CRITERIOS DE ACEPTACION - EJEMPLOS COMPLETOS
+--------------------------------------------
+Todas las historias se escriben en este formato antes de entrar a un sprint.
+Estos tres son la referencia para el resto.
+
+
+HU-05 - REGISTRAR MI DIA EN MENOS DE UN MINUTO
+..............................................
+
+  Escenario: Registro completo del dia de hoy
+    Dado que inicie sesion y no tengo bitacora para hoy
+    Cuando completo los 11 factores y pulso Guardar
+    Entonces se crea el registro con completado = true
+    Y vuelvo al inicio con el mensaje "Dia registrado"
+
+  Escenario: Registro parcial
+    Dado que completo solo horas de sueno y estres
+    Cuando pulso Guardar
+    Entonces el registro se guarda con completado = false
+    Y el motor lo excluye del conteo de dias validos
+
+  Escenario: Un solo registro por dia
+    Dado que ya registre hoy
+    Cuando vuelvo a la pantalla de bitacora
+    Entonces veo mis valores cargados en modo edicion
+    Y el boton dice "Actualizar", no "Guardar"
+
+  Escenario: Valor fuera de rango
+    Cuando ingreso 30 en horas de sueno
+    Entonces veo "Las horas de sueno van de 0 a 24"
+    Y el boton Guardar queda deshabilitado
+
+  Escenario: Tiempo de registro   [se mide en la Review]
+    Dado un usuario que ya uso la pantalla una vez
+    Cuando registra un dia completo
+    Entonces tarda menos de 60 segundos
+
+
+HU-10 - ENCONTRAR COMBINACIONES FRECUENTES ANTES DE MIS EPISODIOS
+.................................................................
+
+  Escenario: Patron fuerte sembrado en los datos
+    Dado un dataset sintetico de 120 dias y 20 episodios
+    Y que SUENO_BAJO precede a 16 de los 20 episodios
+    Y aparece solo en el 10% de los dias sin episodio
+    Cuando ejecuto el analisis con lag = 1
+    Entonces SUENO_BAJO aparece en el ranking 1
+    Y su confianza es mayor o igual a 0.70
+    Y su lift es mayor o igual a 2.0
+
+  Escenario: Factor de ruido descartado
+    Dado que PANTALLA_ALTA esta distribuida al azar
+    Cuando ejecuto el analisis
+    Entonces ninguna regla con PANTALLA_ALTA supera lift 1.20
+    Y no aparece entre los hallazgos
+
+  Escenario: Antecedente explicable
+    Cuando el motor genera reglas
+    Entonces ninguna tiene mas de 3 items en el antecedente
+
+  Escenario: Rendimiento
+    Dado 365 dias, 60 episodios y 12 factores
+    Cuando ejecuto el analisis completo
+    Entonces responde en menos de 3 segundos
+
+
+HU-15 - HALLAZGOS CON NIVEL DE CONFIANZA Y ADVERTENCIA
+......................................................
+
+  Escenario: Lista ordenada de hallazgos
+    Dado un analisis en estado OK con 5 hallazgos
+    Cuando abro la pantalla de patrones
+    Entonces los veo ordenados por ranking ascendente
+    Y cada tarjeta muestra la frase, el periodo analizado, los episodios
+      relacionados sobre el total y una etiqueta ALTA / MEDIA / BAJA
+
+  Escenario: Advertencia siempre visible
+    Cuando abro la pantalla de patrones
+    Entonces la leyenda "Una asociacion no demuestra causalidad" esta visible
+      sin necesidad de desplazarme
+
+  Escenario: Confianza baja
+    Dado un hallazgo con nivel BAJA
+    Entonces su tarjeta lleva un aviso reforzado
+      "Pocos datos todavia: sigue registrando"
+
+  Escenario: Datos insuficientes
+    Dado un analisis en estado DATOS_INSUFICIENTES
+    Cuando abro la pantalla de patrones
+    Entonces no veo ningun hallazgo
+    Y veo cuantos dias y episodios me faltan
+
+
+================================================================================
+08. PLAN DE SPRINTS
+================================================================================
+
+Cada sprint termina en algo demostrable ante el docente. La regla es que el
+Sprint 2 no empieza hasta que el Sprint 1 tenga datos reales entrando al
+sistema: sin datos, el motor no se puede ni probar.
+
+
+SPRINT 1 - "CAPTURAR"          Semanas 1 a 3
+--------------------------------------------
+  OBJETIVO
+    Un paciente puede crear su cuenta, registrar su bitacora diaria y sus
+    episodios. El pipeline de calidad esta activo desde el primer commit.
+
+  DEMO
+    Registrar 7 dias y 2 episodios reales en un dispositivo.
+
+  SPRINT BACKLOG
+    HU-00  Repositorio, entornos y CI/CD ....................  5
+    HU-01  Esquema de BD y catalogos semilla .................  5
+    HU-02  Cuenta e inicio de sesion .........................  3
+    HU-03  Sesion persistente en la app .....................   5
+    HU-04  Perfil clinico y consentimiento ..................   3
+    HU-05  Bitacora diaria ..................................   8
+    HU-06  Registro de episodios ............................   8
+                                                             ----
+                                        7 historias           37 pts
+
+
+SPRINT 2 - "ANALIZAR"          Semanas 4 a 6
+--------------------------------------------
+  OBJETIVO
+    El motor descubre reglas de asociacion sobre datos reales y sinteticos,
+    descarta el ruido y se expone por API. Aqui se juega el proyecto.
+
+  DEMO
+    El motor encuentra el patron sembrado en el dataset sintetico.
+
+  SPRINT BACKLOG
+    HU-07  Historial en calendario ..........................   5
+    HU-08  Generador de datasets sinteticos .................   5
+    HU-09  Discretizacion por catalogo ......................   5
+    HU-10  Reglas de asociacion (Apriori) ...................   8
+    HU-11  Significancia estadistica ........................   3
+    HU-12  Endpoint de analisis y suficiencia ...............   5
+                                                             ----
+                                        6 historias           31 pts
+
+
+SPRINT 3 - "EXPLICAR"          Semanas 7 a 9
+--------------------------------------------
+  OBJETIVO
+    Los hallazgos se leen en espanol claro, con su evidencia y su advertencia,
+    y terminan en un resumen para la consulta.
+
+  DEMO
+    Recorrido completo de extremo a extremo + informe de calidad del proyecto.
+
+  SPRINT BACKLOG
+    HU-13  Arbol de decision a reglas .......................   5
+    HU-14  Explicaciones en lenguaje natural ................   5
+    HU-15  Pantalla de hallazgos ............................   5
+    HU-16  Evidencia de un hallazgo .........................   3
+    HU-17  Riesgo del dia en el inicio ......................   3
+    HU-18  Resumen clinico y exportacion ....................   5
+    HU-19  Registro offline y sincronizacion ................   5
+    HU-20  Panel de tendencias  [FLEXIBLE] ..................   4
+                                                             ----
+                                        8 historias           35 pts
+
+
+SOBRE LOS SPRINTS 1 Y 3
+-----------------------
+Los dos estan por encima de la velocidad objetivo de 31 puntos, y es
+deliberado.
+
+  Sprint 1: hay margen porque HU-00 y HU-01 son trabajo de configuracion que
+  dos personas pueden hacer en paralelo mientras las otras dos aprenden el
+  stack.
+
+  Sprint 3: HU-20 (panel de tendencias) esta marcada como FLEXIBLE. Es la
+  primera que se saca del sprint si la velocidad real de los dos primeros no
+  llega a 31. Sacarla no rompe ningun flujo: los graficos son deseables, la
+  explicacion de los hallazgos no.
+
+
+FUERA DEL ALCANCE COMPROMETIDO - BACKLOG RESTANTE
+-------------------------------------------------
+
+  ITEM                                   PTS   POR QUE QUEDA FUERA
+  -------------------------------------  ---   --------------------------
+  Cuenta de medico (solo lectura)         13   Abre gestion de permisos,
+                                               invitaciones y un modelo de
+                                               autorizacion completo. Es un
+                                               modulo, no una historia.
+
+  Notificaciones y recordatorio diario     5   Mejora la adherencia pero no
+                                               aporta nada al nucleo de
+                                               mineria.
+
+  Clima y presion barometrica              8   Dependencia de API externa. Se
+                                               agregaria como factor nuevo
+                                               sin tocar el motor, gracias al
+                                               diseno del catalogo.
+
+  Modelo predictivo a 24 h                13   Requiere mas datos historicos
+                                               de los que se tendran en 9
+                                               semanas, y cambia el mensaje
+                                               del producto de descriptivo a
+                                               predictivo.
+
+
+================================================================================
+09. EQUIPO, ROLES Y CEREMONIAS
+================================================================================
+
+Cada integrante de nivel inicial trabaja emparejado con uno de nivel medio en
+el mismo frente. Nadie es el unico que entiende una parte del sistema.
+
+
+INTEGRANTE 1  -  NIVEL MEDIO
+  Rol SCRUM / tecnico:  Tech Lead - Backend y motor
+
+  Que hace:
+    Dueno del motor de patrones: discretizacion, Apriori, arbol, correlacion y
+    explicador. Define el esquema de base de datos y revisa todos los Pull
+    Requests del backend. Es quien prototipa el algoritmo en el notebook antes
+    de llevarlo a Django.
+
+  Stack: Django, DRF, pandas, mlxtend, scikit-learn, pytest
+
+
+INTEGRANTE 2  -  NIVEL MEDIO
+  Rol SCRUM / tecnico:  Scrum Master - Flutter Lead
+
+  Que hace:
+    Facilita las ceremonias, mantiene el tablero y el burndown, y retira
+    impedimentos. En lo tecnico define la arquitectura de la app: navegacion,
+    capa de servicios, manejo de estado y cliente HTTP. Revisa los PR del
+    movil.
+
+  Stack: Flutter, provider, dio, flutter_secure_storage, flutter_test
+
+
+INTEGRANTE 3  -  NIVEL INICIAL
+  Rol SCRUM / tecnico:  Product Owner - Desarrollo movil
+
+  Que hace:
+    Dueno del backlog: prioriza, escribe los criterios de aceptacion y acepta
+    o rechaza cada historia en la Review. Es el rol ideal para empezar porque
+    exige entender el problema, no dominar el stack. En lo tecnico construye
+    pantallas junto al Flutter Lead.
+
+  Stack: GitHub Projects, Figma, Flutter (pantallas y formularios), fl_chart
+
+
+INTEGRANTE 4  -  NIVEL INICIAL
+  Rol SCRUM / tecnico:  QA Engineer - Backend de apoyo
+
+  Que hace:
+    Dueno del plan de pruebas y de las metricas de calidad. Construye el
+    generador de datasets sinteticos y los casos de oraculo, la pieza que
+    demuestra que el motor funciona. Mantiene la coleccion Postman y el
+    informe de SonarCloud. En desarrollo toma los CRUD simples del backend.
+
+  Stack: pytest, pytest-cov, SonarCloud, GitHub Actions, Postman, Django
+
+
+POR QUE EL PRODUCT OWNER ES UN INTEGRANTE DE NIVEL INICIAL
+----------------------------------------------------------
+El PO necesita entender el PROBLEMA -que le sirve a un paciente con migrana-
+no dominar Flutter ni scikit-learn.
+
+Darle ese rol a quien tiene menos experiencia tecnica le da voz real en el
+proyecto en vez de dejarlo recibiendo tareas, y obliga al equipo a explicar
+cada historia en lenguaje de usuario.
+
+El generador de datasets sinteticos cumple la misma funcion para el QA: es una
+pieza autonoma, imprescindible y de dificultad media.
+
+
+CEREMONIAS
+----------
+
+  CEREMONIA         CUANDO               DURACION   RESULTADO CONCRETO
+  ----------------  -------------------  --------   ------------------------
+  Sprint Planning   Lunes, inicio de     2 h        Sprint Backlog congelado,
+                    sprint                          objetivo del sprint en una
+                                                    frase, historias asignadas
+
+  Daily             Lun / mie / vie      15 min     Que hice, que hare, que me
+                                                    bloquea. Si no coinciden
+                                                    en horario se hace por
+                                                    escrito en el canal: lo
+                                                    importante es el registro,
+                                                    no la reunion
+
+  Refinamiento      Mitad del sprint     1 h        Las historias del sprint
+                                                    siguiente cumplen la
+                                                    Definition of Ready y
+                                                    estan estimadas con
+                                                    Planning Poker
+
+  Sprint Review     Viernes, fin de      1 h        Demo en dispositivo real.
+                    sprint                          El PO acepta o rechaza
+                                                    cada historia. Lo
+                                                    rechazado vuelve al
+                                                    backlog, no se arrastra
+                                                    como "casi hecho"
+
+  Retrospectiva     Despues de la        45 min     Seguir / dejar / empezar,
+                    Review                          y UNA SOLA accion de
+                                                    mejora con responsable y
+                                                    fecha. Se revisa en la
+                                                    retro siguiente
+
+
+================================================================================
+10. PLAN DE CALIDAD
+================================================================================
+
+Es la materia. Un proyecto que solo funciona no alcanza: hay que poder
+demostrar con evidencia que funciona, medir cuanto, y saber que se hizo para
+que fuera asi.
+
+
+DEFINITION OF READY
+-------------------
+Una historia NO entra a un sprint si no cumple las seis condiciones:
+
+  1. Esta escrita en formato "Como... quiero... para...", con el "para"
+     explicando un beneficio real.
+  2. Tiene criterios de aceptacion en Gherkin, incluyendo al menos un
+     escenario de error.
+  3. Esta estimada por el equipo completo con Planning Poker.
+  4. Sus dependencias estan identificadas y resueltas o planificadas antes.
+  5. Si tiene interfaz, hay un boceto en Figma aprobado por el PO.
+  6. Los datos de prueba necesarios existen o estan en el alcance de HU-08.
+
+
+DEFINITION OF DONE
+------------------
+Una historia esta terminada cuando pasa las ocho. No hay "hecho al 90%".
+
+  #  CRITERIO                                           SE VERIFICA EN
+  -  -------------------------------------------------  ----------------
+  1  Codigo integrado a develop mediante Pull Request   GitHub
+     con al menos una revision aprobada por otra persona
+  2  Todos los criterios de aceptacion verificados      Sprint Review
+     por el Product Owner
+  3  Pruebas unitarias nuevas que cubren la logica      CI
+     agregada
+  4  Cobertura: >= 80% backend, >= 90% en el paquete    pytest-cov / lcov
+     motor/, >= 60% Flutter
+  5  Quality Gate de SonarCloud en verde: 0 bugs        SonarCloud
+     bloqueantes, 0 vulnerabilidades, duplicacion < 3%
+  6  Lint sin errores: ruff, black --check,             CI
+     dart analyze
+  7  Endpoints documentados en OpenAPI y agregados      drf-spectacular
+     a la coleccion Postman
+  8  La suite completa pasa: sin regresiones en lo      CI
+     ya entregado
+
+
+ESTRATEGIA DE PRUEBAS
+---------------------
+
+  NIVEL                HERRAMIENTA              CASOS  DUENO
+  -------------------  -----------------------  -----  ------------------
+  Unitarias - motor    pytest                    ~70   Medio 1 + QA
+      Discretizador, Apriori, arbol, correlacion, explicador, calculo de
+      riesgo. Es donde va el grueso del esfuerzo: el motor es logica pura y
+      se presta a cobertura alta.
+
+  Unitarias - dominio  pytest                    ~25   Bajo 2
+      Validaciones de modelos, restricciones de rango, calculo de duracion
+      del episodio.
+
+  Integracion API      pytest + APIClient        ~35   QA
+      Cada endpoint con base de datos real de pruebas: codigos de estado,
+      permisos, aislamiento entre usuarios.
+
+  Widget               flutter_test + mocktail   ~20   Medio 2 + Bajo 1
+      Formularios de bitacora y episodio, validaciones, estados de carga y
+      de error, tarjeta de hallazgo.
+
+  Extremo a extremo    integration_test            1   QA + Medio 2
+      Un solo flujo, el critico: registrarse -> bitacora 14 dias sembrados
+      -> episodio -> analisis -> hallazgo visible -> resumen generado.
+
+  Oraculo del motor    pytest + datos sinteticos   7   QA + Medio 1
+      La prueba que valida la tesis del proyecto. Detalle abajo.
+
+
+PRUEBAS DE ORACULO - EL ARGUMENTO CENTRAL DEL PROYECTO
+------------------------------------------------------
+Estas siete pruebas son la evidencia de que el motor encuentra lo que debe
+encontrar. Se siembra un patron conocido en datos sinteticos y se verifica que
+el algoritmo lo recupere. Es lo que permite afirmar que el sistema funciona
+sin tener pacientes reales.
+
+  O-01  PATRON SIMPLE FUERTE
+        Dataset: 120 dias, 20 episodios. SUENO_BAJO precede 16 de 20
+                 episodios; aparece en el 10% de los dias sin episodio.
+        Esperado: ranking 1, confianza >= 0.70, lift >= 2.0, p < 0.01.
+
+  O-02  PATRON COMBINADO
+        Dataset: SUENO_BAJO + COMIDA_OMITIDA juntos preceden el 80% de los
+                 episodios; por separado, el 35%.
+        Esperado: la regla de 2 items entra en el top-3 y su lift supera al
+                  de cada item por separado.
+
+  O-03  FACTOR DE RUIDO
+        Dataset: PANTALLA_ALTA distribuida uniformemente, sin relacion con
+                 los episodios.
+        Esperado: lift aproximadamente 1.0 -> filtrada. No aparece en ningun
+                  hallazgo.
+
+  O-04  DATOS INSUFICIENTES
+        Dataset: 10 dias de bitacora, 1 episodio.
+        Esperado: estado DATOS_INSUFICIENTES, cero hallazgos, mensaje con lo
+                  que falta.
+
+  O-05  SIN PATRON REAL
+        Dataset: 90 dias, 30 episodios, todos los factores aleatorios.
+        Esperado: ningun hallazgo con nivel de confianza ALTA.
+
+  O-06  MUESTRA DESBALANCEADA
+        Dataset: 200 dias con solo 3 episodios, patron presente en los 3.
+        Esperado: el hallazgo aparece pero marcado BAJA. Lift alto con n
+                  pequeno no es confianza alta.
+
+  O-07  RENDIMIENTO
+        Dataset: 365 dias, 60 episodios, 12 factores.
+        Esperado: analisis completo en menos de 3 segundos.
+
+
+  COMO SE PRESENTA ESTO EN LA DEFENSA
+  O-03, O-05 y O-06 son las mas valiosas, y son las que un equipo sin
+  formacion en calidad no escribiria. Demuestran que el sistema SABE CALLARSE:
+  que no inventa patrones cuando no los hay, y que reconoce cuando tiene pocos
+  datos. En un sistema de salud, el falso positivo es peor que el silencio.
+
+
+ATRIBUTOS DE CALIDAD - ISO/IEC 25010
+------------------------------------
+
+  CARACTERISTICA      SUBCARACTERISTICA    METRICA                 META
+  ------------------  -------------------  ----------------------  --------
+  Adecuacion          Correccion func.     Pruebas de oraculo      7 / 7
+  funcional                                superadas
+                      Completitud func.    Historias aceptadas     >= 90%
+                                           por el PO
+
+  Eficiencia de       Comportamiento       Tiempo del analisis     < 3 s
+  desempeno           temporal             con 365 dias
+
+  Usabilidad          Operabilidad         Tiempo de registro      < 60 s
+                                           de un dia
+                      Comprensibilidad     Escala SUS (Review 3)   >= 70
+
+  Fiabilidad          Tolerancia a fallos  Registros perdidos      0
+                                           por caida de red
+                      Madurez              Defectos escapados      <= 2
+                                           por sprint
+
+  Seguridad           Confidencialidad     Acceso a datos ajenos   0 casos
+                      Integridad           Vulnerabilidades Sonar  0
+
+  Mantenibilidad      Capacidad de ser     Cobertura del paquete   >= 90%
+                      probado              motor/
+                      Modularidad          Duplicacion de codigo   < 3%
+                      Analizabilidad       Deuda tecnica (rating)  A
+
+  INSTRUMENTOS
+    pytest / pytest-benchmark / pytest-cov ... adecuacion, eficiencia,
+                                               mantenibilidad
+    Prueba con 5 usuarios + cuestionario SUS . usabilidad
+    Prueba de HU-19 e issues de GitHub ....... fiabilidad
+    Pruebas de integracion y SonarCloud ...... seguridad
+
+
+METRICAS DE SEGUIMIENTO DEL PROCESO
+-----------------------------------
+
+  METRICA                    CUANDO      QUE DECISION DISPARA
+  -------------------------  ----------  -------------------------------
+  Velocidad (pts/sprint)     Review      Si el Sprint 1 cierra bajo 28, se
+                                         saca HU-20 del Sprint 3 en el
+                                         Planning 2.
+
+  Burndown                   Cada Daily  Si a mitad de sprint queda mas del
+                                         60% pendiente, se renegocia el
+                                         alcance con el PO. No se trabaja de
+                                         noche.
+
+  Cobertura                  Cada PR     Un PR que baja la cobertura global
+                                         no se aprueba.
+
+  Deuda tecnica              Semanal     Si sale de A, la primera tarea del
+                                         sprint siguiente es pagarla.
+
+  Historias aceptadas        Review      Bajo el 80% indica criterios de
+  a la primera                           aceptacion mal escritos. Se corrige
+                                         en el Refinamiento.
+
+  Defectos escapados         Retro       Cada uno se analiza: que prueba
+                                         faltaba. Y esa prueba se escribe.
+
+
+GESTION DE RIESGOS
+------------------
+
+  R1 - EL MOTOR NO ENCUENTRA PATRONES EN DATOS REALES
+       porque 9 semanas no alcanzan para acumular historial
+       Probabilidad: ALTA      Impacto: ALTO
+       Mitigacion: la demo se hace con datasets sinteticos de HU-08 y con las
+       pruebas de oraculo. Los datos reales del equipo son complemento, no la
+       base de la validacion. ESTO SE ACUERDA CON EL DOCENTE EN LA SEMANA 1.
+
+  R2 - LOS INTEGRANTES DE NIVEL INICIAL SE BLOQUEAN
+       y el trabajo se concentra en dos personas
+       Probabilidad: MEDIA     Impacto: ALTO
+       Mitigacion: emparejamiento fijo por frente, revision cruzada
+       obligatoria de PR, y roles con propiedad real (PO y QA) que no dependen
+       del nivel tecnico. Se vigila en cada Retro.
+
+  R3 - APRIORI DEVUELVE CIENTOS DE REGLAS
+       y la pantalla es ilegible
+       Probabilidad: MEDIA     Impacto: MEDIO
+       Mitigacion: umbrales estrictos desde el primer dia (lift >= 1.2, max. 3
+       items), deduplicacion de reglas que se implican entre si y tope de 10
+       hallazgos mostrados.
+
+  R4 - SE PRESENTAN HALLAZGOS FALSOS
+       por muestras pequenas
+       Probabilidad: MEDIA     Impacto: ALTO
+       Mitigacion: umbral duro de suficiencia (RN-02), p-valor obligatorio,
+       nivel de confianza por numero de observaciones y la advertencia
+       permanente de no causalidad. Cubierto por O-04, O-05 y O-06.
+
+  R5 - FLUTTER CONSUME MAS TIEMPO DEL ESTIMADO
+       en el Sprint 1
+       Probabilidad: MEDIA     Impacto: MEDIO
+       Mitigacion: el backend avanza en paralelo y no depende del movil. Si
+       hace falta, el Sprint 1 cierra con las pantallas de captura funcionando
+       y sin pulir visualmente.
+
+  R6 - MANEJO DE DATOS DE SALUD SIN BASE LEGAL CLARA
+       Probabilidad: BAJA      Impacto: ALTO
+       Mitigacion: consentimiento explicito con fecha (perfil_clinico), tokens
+       en almacen cifrado, auditoria de accesos, y ningun dato identificable
+       en logs ni en los datasets de prueba.
+
+
+================================================================================
+11. API Y ESTRUCTURA DEL REPOSITORIO
+================================================================================
+
+ENDPOINTS
+---------
+
+  METODO       RUTA                                    QUE HACE           CU
+  -----------  --------------------------------------  -----------------  --------
+  POST         /api/auth/registro/                     Crea cuenta        CU-01
+  POST         /api/auth/login/                        access + refresh   CU-02
+  POST         /api/auth/refresh/                      Renueva token      CU-02
+  POST         /api/auth/logout/                       Blacklist          CU-03
+  GET PATCH    /api/perfil/                            Perfil + consent.  CU-04
+  GET POST     /api/bitacora/                          Lista / crea       CU-05,07
+  GET PUT      /api/bitacora/{fecha}/                  Un dia (editar)    CU-05
+  POST         /api/bitacora/lote/                     Cola offline       RNF-04
+  GET POST     /api/episodios/                         Lista / crea       CU-06,07
+  GET PUT DEL  /api/episodios/{id}/                    Detalle / edicion  CU-06
+  GET          /api/catalogos/factores/                Factores + reglas  soporte
+  GET          /api/catalogos/sintomas/                Sintomas           CU-06
+  GET          /api/catalogos/alimentos/               Alimentos          CU-05
+  POST         /api/analisis/                          EJECUTA EL MOTOR   CU-08
+  GET          /api/analisis/ultimo/                   Ultima corrida     CU-10
+  GET          /api/analisis/{id}/hallazgos/{hid}/     Evidencia          CU-10
+  POST         /api/hallazgos/{id}/valoracion/         Util si / no       CU-11
+  GET          /api/riesgo/hoy/                        Nivel del dia      CU-09
+  GET          /api/tendencias/                        Series graficos    CU-12
+  POST         /api/reportes/                          Genera resumen     CU-13
+  GET          /api/reportes/{id}/pdf/                 Descarga PDF       CU-13
+
+  Body de POST /api/analisis/ :
+      { "periodo_dias": 90, "lag_dias": 1 }
+
+  Respuesta 201:
+      { "analisis_id": 12,
+        "estado": "OK",
+        "periodo": {"inicio": "2026-06-12", "fin": "2026-09-10"},
+        "dias_analizados": 90,
+        "episodios_analizados": 14,
+        "hallazgos": [ ... ],
+        "riesgo_hoy": {"nivel": "MEDIO", "score": 0.41} }
+
+
+ESTRUCTURA DEL REPOSITORIO
+--------------------------
+
+  migrapatron/
+  |
+  +-- backend/
+  |   +-- config/                     # settings, urls, wsgi
+  |   +-- apps/
+  |   |   +-- cuentas/                # usuario, perfil_clinico, JWT
+  |   |   +-- bitacora/               # registro_diario, episodio, catalogos
+  |   |   +-- analisis/
+  |   |       +-- motor/              # <-- EL NUCLEO. Python puro, sin Django
+  |   |       |   +-- discretizador.py
+  |   |       |   +-- apriori.py
+  |   |       |   +-- arbol.py
+  |   |       |   +-- correlacion.py
+  |   |       |   +-- riesgo.py
+  |   |       |   +-- explicador.py
+  |   |       |   +-- tipos.py        # dataclasses: Transaccion, Regla,
+  |   |       |                       #              Hallazgo
+  |   |       +-- servicios.py        # orquesta motor + ORM + persistencia
+  |   |       +-- sinteticos.py       # generador de datasets (HU-08)
+  |   |       +-- models.py
+  |   |       +-- views.py
+  |   +-- tests/
+  |   |   +-- motor/                  # unitarias: cobertura >= 90%
+  |   |   +-- oraculo/                # O-01 .. O-07
+  |   |   +-- api/                    # integracion
+  |   +-- requirements.txt
+  |   +-- pytest.ini
+  |
+  +-- movil/
+  |   +-- lib/
+  |       +-- core/                   # api, storage, tema, errores
+  |       +-- modelos/
+  |       +-- servicios/
+  |       +-- estado/                 # providers
+  |       +-- pantallas/
+  |           +-- acceso/   bitacora/   episodios/
+  |           +-- hallazgos/   reporte/
+  |
+  +-- prototipo/                      # notebooks de validacion del algoritmo
+  |   +-- 01_generacion_sintetica.ipynb
+  |   +-- 02_apriori_umbrales.ipynb
+  |   +-- 03_arbol_vs_apriori.ipynb
+  |
+  +-- docs/
+  |   +-- diagramas/                  # los 4 archivos .puml
+  |   +-- backlog.md                  # historias con criterios en Gherkin
+  |   +-- plan_pruebas.md
+  |   +-- metricas/                   # capturas de SonarCloud por sprint
+  |
+  +-- .github/workflows/ci.yml
+
+
+LA REGLA DE ORO DEL REPOSITORIO
+-------------------------------
+El paquete apps/analisis/motor/ NO IMPORTA DJANGO NI TOCA LA BASE DE DATOS.
+
+Recibe un DataFrame y una lista de reglas de discretizacion, y devuelve
+objetos Hallazgo. Quien conecta el motor con el ORM es servicios.py.
+
+Gracias a esa separacion las pruebas del motor corren en milisegundos, sin
+base de datos, y se puede llegar al 90% de cobertura sin esfuerzo heroico.
+
+
+================================================================================
+12. SEMANA 1 - CHECKLIST DE ARRANQUE
+================================================================================
+
+Lo que hay que tener cerrado antes del primer Daily del miercoles. Sin esto,
+el Sprint 1 arranca torcido.
+
+  [ ] Crear el repositorio migrapatron en GitHub con las ramas main y
+      develop, y proteccion de develop: nada entra sin PR aprobado.
+                                                            -> Medio 1
+
+  [ ] Levantar el tablero en GitHub Projects con las 21 historias cargadas y
+      el Sprint 1 asignado.
+                                                            -> Bajo 1 (PO)
+
+  [ ] Escribir ci.yml: en cada PR corre ruff, black --check, pytest --cov,
+      dart analyze y flutter test.
+                                                            -> Bajo 2 (QA)
+
+  [ ] Conectar SonarCloud al repositorio y fijar el Quality Gate del proyecto.
+                                                            -> Bajo 2 (QA)
+
+  [ ] Proyecto Django con las tres apps y las migraciones de las 17 tablas.
+                                                            -> Medio 1
+
+  [ ] Comando  python manage.py seed_catalogos : factores, reglas de
+      discretizacion, sintomas y alimentos.
+                                                            -> Medio 1 + Bajo 2
+
+  [ ] Proyecto Flutter con navegacion, tema, cliente dio con interceptor JWT
+      y estructura de carpetas.
+                                                            -> Medio 2
+
+  [ ] Bocetos en Figma de las 5 pantallas del Sprint 1: acceso, inicio,
+      bitacora, episodio, historial.
+                                                            -> Bajo 1 (PO)
+
+  [ ] Notebook 01_generacion_sintetica.ipynb: generar 120 dias con SUENO_BAJO
+      sembrado y confirmar a mano que Apriori lo recupera.
+                                                            -> Medio 1 + Bajo 2
+
+  [ ] Acordar con el docente que la validacion del motor se hace con datasets
+      sinteticos y pruebas de oraculo.
+                                                            -> Medio 2 (SM)
+
+  [ ] Renderizar los 4 diagramas .puml y adjuntarlos al documento de la
+      materia.
+                                                            -> Bajo 1 (PO)
+
+  [ ] Corregir en el documento original la mencion a "Edge AI": la tecnologia
+      emergente del proyecto es IA EXPLICABLE.
+                                                            -> Bajo 1 (PO)
+
+
+EL NOTEBOOK DE LA SEMANA 1 NO ES OPCIONAL
+-----------------------------------------
+Validar Apriori en un notebook antes de escribir una linea de Django es lo que
+evita descubrir en la semana 6 que los umbrales no sirven o que el lag esta
+mal planteado.
+
+Media hora de notebook ahorra un sprint entero, y es ademas la primera
+evidencia de calidad que se puede mostrar.
+
+
+================================================================================
+ANEXO A. DIAGRAMAS PLANTUML
+================================================================================
+
+Los cuatro diagramas estan como archivos separados, listos para renderizar en
+plantuml.com, en la extension PlantUML de VS Code o con la CLI de PlantUML.
+
+  docs/diagramas/01_casos_de_uso.puml
+      Diagrama de casos de uso: 2 actores, 4 paquetes, 13 casos de uso y una
+      unica relacion <<extend>>, con las notas que explican por que la
+      sincronizacion offline y la explicabilidad son RNF y no casos de uso.
+
+  docs/diagramas/02_modelo_datos.puml
+      Modelo entidad-relacion completo: 17 entidades con todos sus campos,
+      tipos, restricciones e indices, mas la leyenda por modulo.
+      (Reproducido en el ANEXO B de este documento.)
+
+  docs/diagramas/03_arquitectura.puml
+      Vista de componentes: capa movil, capa servidor con el motor detallado,
+      base de datos y los dos actores externos.
+
+  docs/diagramas/04_secuencia_analisis.puml
+      Diagrama de secuencia del CU-08 (analizar mis patrones): desde el toque del
+      paciente hasta la lista de hallazgos, incluyendo el flujo alterno de
+      datos insuficientes.
+
+
+================================================================================
+ANEXO B. ESQUEMA DE BASE DE DATOS EN PLANTUML
+================================================================================
+
+Copiar tal cual en plantuml.com o en el editor. Es el contenido de
+docs/diagramas/02_modelo_datos.puml.
+
+--------------------------------------------------------------------------------
+
+@startuml migrapatron_modelo_datos
+title MigraPatron IA - Modelo Entidad-Relacion (PostgreSQL)
+
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+
+' ===================== M0 : IDENTIDAD =====================
+entity "usuario" as usuario {
+  * id : BIGSERIAL <<PK>>
+  --
+  * email : VARCHAR(150) <<UQ>>
+  * password_hash : VARCHAR(255)
+  * nombre : VARCHAR(80)
+  * apellido : VARCHAR(80)
+  fecha_nacimiento : DATE
+  sexo : ENUM(F, M, OTRO, NS)
+  zona_horaria : VARCHAR(40)
+  * fecha_registro : TIMESTAMPTZ
+  ultimo_acceso : TIMESTAMPTZ
+  * activo : BOOLEAN
+}
+
+entity "perfil_clinico" as perfil {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>> <<UQ>>
+  anios_con_migrana : SMALLINT
+  diagnostico_previo : BOOLEAN
+  tipo_migrana : ENUM(CON_AURA, SIN_AURA, CRONICA, DESCONOCIDA)
+  medicacion_habitual : TEXT
+  ciclo_menstrual_aplica : BOOLEAN
+  * consentimiento_analisis : BOOLEAN
+  fecha_consentimiento : TIMESTAMPTZ
+}
+
+' ========== M4 : CATALOGOS Y METADATOS DEL MOTOR ==========
+entity "catalogo_factor" as factor {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * codigo : VARCHAR(30) <<UQ>>
+  * nombre_campo : VARCHAR(40)
+  * etiqueta : VARCHAR(80)
+  * tipo_dato : ENUM(NUMERICO, ORDINAL, BOOLEANO, CATEGORICO)
+  unidad : VARCHAR(20)
+  valor_min : NUMERIC(6,2)
+  valor_max : NUMERIC(6,2)
+  * aplica_lag : BOOLEAN
+  * activo : BOOLEAN
+  * orden : SMALLINT
+}
+
+entity "regla_discretizacion" as regla {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * factor_id : SMALLINT <<FK>>
+  * etiqueta_item : VARCHAR(40)
+  * operador : ENUM(LT, LTE, BETWEEN, EQ, GTE, GT, IN)
+  valor_min : NUMERIC(6,2)
+  valor_max : NUMERIC(6,2)
+  valor_texto : VARCHAR(40)
+  * descripcion_humana : VARCHAR(120)
+  * orden : SMALLINT
+  --
+  UQ(factor_id, etiqueta_item)
+}
+
+entity "alimento" as alimento {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * codigo : VARCHAR(30) <<UQ>>
+  * nombre : VARCHAR(60)
+  * grupo : ENUM(LACTEO, EMBUTIDO, CHOCOLATE, CAFEINA,
+      ALCOHOL, GLUTAMATO, CITRICO, EDULCORANTE, OTRO)
+  * activo : BOOLEAN
+}
+
+entity "sintoma" as sintoma {
+  * id : SMALLSERIAL <<PK>>
+  --
+  * codigo : VARCHAR(30) <<UQ>>
+  * nombre : VARCHAR(60)
+  * activo : BOOLEAN
+}
+
+' ===================== M1 : CAPTURA =====================
+entity "registro_diario" as diario {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * fecha : DATE
+  horas_sueno : NUMERIC(4,2)
+  calidad_sueno : SMALLINT      /* 1..5 */
+  hidratacion : ENUM(BAJA, MEDIA, ALTA)
+  comidas_omitidas : SMALLINT   /* 0..3 */
+  estres_percibido : SMALLINT   /* 1..5 */
+  horas_pantalla : NUMERIC(4,2)
+  minutos_actividad : SMALLINT
+  cafeina_tazas : SMALLINT
+  consumo_alcohol : BOOLEAN
+  fase_ciclo : ENUM(NO_APLICA, MENSTRUACION, FOLICULAR,
+      OVULACION, LUTEA)
+  * completado : BOOLEAN
+  * origen : ENUM(MANUAL, SINTETICO, IMPORTADO)
+  * creado_en : TIMESTAMPTZ
+  * actualizado_en : TIMESTAMPTZ
+  --
+  UQ(usuario_id, fecha)
+  IDX(usuario_id, fecha DESC)
+}
+
+entity "registro_alimento" as regali {
+  * id : BIGSERIAL <<PK>>
+  --
+  * registro_diario_id : BIGINT <<FK>>
+  * alimento_id : SMALLINT <<FK>>
+  porciones : SMALLINT
+  --
+  UQ(registro_diario_id, alimento_id)
+}
+
+entity "episodio_migrana" as episodio {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  registro_diario_id : BIGINT <<FK>>   /* NULL */
+  * inicio : TIMESTAMPTZ
+  fin : TIMESTAMPTZ
+  duracion_min : INTEGER
+  * intensidad_eva : SMALLINT           /* 1..10 */
+  localizacion : ENUM(UNILATERAL_IZQ, UNILATERAL_DER,
+      BILATERAL, OCCIPITAL, DIFUSA)
+  tuvo_aura : BOOLEAN
+  medicacion_tomada : VARCHAR(120)
+  minutos_hasta_alivio : INTEGER
+  alivio_percibido : SMALLINT           /* 0..10 */
+  limito_actividad : BOOLEAN
+  notas : TEXT
+  * creado_en : TIMESTAMPTZ
+  --
+  IDX(usuario_id, inicio DESC)
+}
+
+entity "episodio_sintoma" as episin {
+  * id : BIGSERIAL <<PK>>
+  --
+  * episodio_id : BIGINT <<FK>>
+  * sintoma_id : SMALLINT <<FK>>
+  --
+  UQ(episodio_id, sintoma_id)
+}
+
+' ===================== M2 : ANALISIS =====================
+entity "analisis" as analisis {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * ejecutado_en : TIMESTAMPTZ
+  * periodo_inicio : DATE
+  * periodo_fin : DATE
+  * dias_analizados : INTEGER
+  * episodios_analizados : INTEGER
+  * lag_dias : SMALLINT                 /* 0..2 */
+  * version_motor : VARCHAR(20)
+  parametros : JSONB  /* soporte_min, confianza_min,
+                         lift_min, profundidad_max */
+  * estado : ENUM(OK, DATOS_INSUFICIENTES, ERROR)
+  mensaje_estado : VARCHAR(200)
+  duracion_ms : INTEGER
+  --
+  IDX(usuario_id, ejecutado_en DESC)
+}
+
+entity "hallazgo" as hallazgo {
+  * id : BIGSERIAL <<PK>>
+  --
+  * analisis_id : BIGINT <<FK>>
+  * tipo : ENUM(ASOCIACION, ARBOL, CORRELACION, FRECUENCIA)
+  * antecedente : JSONB  /* ["SUENO_BAJO", "DESAYUNO_OMITIDO"] */
+  soporte : NUMERIC(5,4)
+  confianza : NUMERIC(5,4)
+  lift : NUMERIC(6,3)
+  p_valor : NUMERIC(6,5)
+  * episodios_relacionados : INTEGER
+  * total_episodios : INTEGER
+  * nivel_confianza : ENUM(ALTA, MEDIA, BAJA)
+  * texto_explicacion : TEXT
+  * ranking : SMALLINT
+}
+
+entity "valoracion_hallazgo" as valoracion {
+  * id : BIGSERIAL <<PK>>
+  --
+  * hallazgo_id : BIGINT <<FK>>
+  * usuario_id : BIGINT <<FK>>
+  * util : BOOLEAN
+  comentario : VARCHAR(300)
+  * creado_en : TIMESTAMPTZ
+  --
+  UQ(hallazgo_id, usuario_id)
+}
+
+entity "riesgo_diario" as riesgo {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * fecha : DATE
+  * nivel : ENUM(BAJO, MEDIO, ALTO)
+  * score : NUMERIC(5,2)
+  factores_activos : JSONB
+  analisis_id : BIGINT <<FK>>
+  * calculado_en : TIMESTAMPTZ
+  --
+  UQ(usuario_id, fecha)
+}
+
+' ===================== M3 : REPORTE =====================
+entity "reporte_clinico" as reporte {
+  * id : BIGSERIAL <<PK>>
+  --
+  * usuario_id : BIGINT <<FK>>
+  * analisis_id : BIGINT <<FK>>
+  * generado_en : TIMESTAMPTZ
+  * periodo_inicio : DATE
+  * periodo_fin : DATE
+  * resumen : TEXT
+  * formato : ENUM(PDF, TEXTO)
+  hash_contenido : VARCHAR(64)
+  veces_compartido : INTEGER
+}
+
+entity "evento_auditoria" as auditoria {
+  * id : BIGSERIAL <<PK>>
+  --
+  usuario_id : BIGINT <<FK>>
+  * accion : VARCHAR(40)
+  * entidad : VARCHAR(40)
+  entidad_id : BIGINT
+  detalle : JSONB
+  ip : INET
+  * ocurrido_en : TIMESTAMPTZ
+}
+
+' ===================== RELACIONES =====================
+usuario ||--|| perfil     : tiene
+usuario ||--o{ diario     : registra
+usuario ||--o{ episodio   : sufre
+usuario ||--o{ analisis   : solicita
+usuario ||--o{ riesgo     : recibe
+usuario ||--o{ reporte    : genera
+usuario ||--o{ valoracion : valora
+usuario ||--o{ auditoria  : produce
+
+factor ||--o{ regla : se discretiza con
+
+diario   ||--o{ regali : consumio
+alimento ||--o{ regali : aparece en
+
+diario   |o--o{ episodio : contexto del dia
+episodio ||--o{ episin   : presento
+sintoma  ||--o{ episin   : aparece en
+
+analisis ||--o{ hallazgo   : produce
+hallazgo ||--o{ valoracion : recibe
+analisis |o--o{ riesgo     : alimenta
+analisis ||--o{ reporte    : respalda
+
+legend right
+  |= Modulo |= Tablas |
+  | M0 Identidad | usuario, perfil_clinico |
+  | M1 Captura | registro_diario, registro_alimento,\nepisodio_migrana, episodio_sintoma |
+  | M2 Analisis | analisis, hallazgo, valoracion_hallazgo,\nriesgo_diario |
+  | M3 Reporte | reporte_clinico |
+  | M4 Catalogos | catalogo_factor, regla_discretizacion,\nalimento, sintoma, evento_auditoria |
+endlegend
+
+@enduml
+
+--------------------------------------------------------------------------------
+
+
+================================================================================
+                              FIN DEL DOCUMENTO
+              MigraPatron IA - Plan de proyecto SCRUM - v1.0
+================================================================================

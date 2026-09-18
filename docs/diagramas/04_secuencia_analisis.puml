@@ -1,0 +1,77 @@
+@startuml migrapatron_secuencia_analisis
+title CU-08 Analizar mis patrones - Flujo principal
+
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #5E5B70
+  LifeLineBorderColor #C9C3E0
+  ParticipantBorderColor #4B3F8C
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #4B3F8C
+}
+
+actor Paciente as P
+participant "App Flutter" as APP
+participant "POST /api/analisis/" as API
+participant "ServicioAnalisis" as SRV
+participant "discretizador" as DISC
+participant "apriori / arbol /\ncorrelacion" as ALGO
+participant "explicador" as EXPL
+database "PostgreSQL" as DB
+
+P -> APP : Toca "Analizar mis patrones"
+APP -> API : POST /api/analisis/\n{ periodo_dias: 90, lag_dias: 1 }
+activate API
+API -> SRV : ejecutar(usuario, periodo, lag)
+activate SRV
+
+SRV -> DB : leer registro_diario + episodio_migrana\ndel periodo
+DB --> SRV : 90 filas, 14 episodios
+
+group Paso 2 - Validar suficiencia de datos (RN-02)
+  SRV -> SRV : dias_completos >= 14 ?\nepisodios >= 3 ?
+  alt Datos insuficientes
+    SRV -> DB : INSERT analisis\n(estado = DATOS_INSUFICIENTES)
+    SRV --> API : 200 { estado, faltan_dias, faltan_episodios }
+    API --> APP : "Necesitas 5 dias mas de registro"
+    note right of APP
+      No se muestra ningun hallazgo.
+      Es una regla de calidad, no un error.
+    end note
+  end
+end
+
+SRV -> DISC : construir matriz con ventana de lag
+activate DISC
+DISC -> DB : leer catalogo_factor + regla_discretizacion
+DB --> DISC : 11 factores, 27 reglas
+DISC -> DISC : valor crudo -> item\n(6.5 h -> SUENO_BAJO)
+DISC -> DISC : unir dia D con dia D-1\ny marcar MIGRANA = SI/NO
+DISC --> SRV : DataFrame de transacciones
+deactivate DISC
+
+SRV -> ALGO : Paso 4 - Apriori\n(soporte>=0.10, confianza>=0.60, lift>=1.2)
+SRV -> ALGO : Paso 5 - Arbol de decision\n(profundidad max 3)
+SRV -> ALGO : Paso 6 - Chi-cuadrado / Fisher\npor factor
+activate ALGO
+ALGO --> SRV : reglas candidatas + metricas
+deactivate ALGO
+
+SRV -> SRV : filtrar lift <= 1.2,\ndeduplicar, ordenar por lift
+SRV -> EXPL : componer explicacion de cada regla
+activate EXPL
+EXPL -> EXPL : usa descripcion_humana del catalogo\n+ soporte/confianza/lift\n+ nivel de confianza por n
+EXPL --> SRV : "En 9 de tus 14 episodios habias\ndormido menos de 6 horas el dia anterior."
+deactivate EXPL
+
+SRV -> DB : INSERT analisis (estado = OK)
+SRV -> DB : INSERT hallazgo x N
+SRV -> DB : UPSERT riesgo_diario de hoy (alimenta CU-09)
+SRV --> API : { analisis_id, hallazgos[], riesgo_hoy }
+deactivate SRV
+API --> APP : 201 Created
+deactivate API
+
+APP -> P : Lista de hallazgos con evidencia\n+ aviso: "una asociacion no demuestra causalidad"
+
+@enduml

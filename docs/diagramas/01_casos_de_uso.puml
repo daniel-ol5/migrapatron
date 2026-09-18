@@ -1,0 +1,96 @@
+@startuml migrapatron_casos_uso
+title MigraPatron IA - Diagrama de Casos de Uso
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #4B3F8C
+  ArrowColor #5E5B70
+}
+skinparam package {
+  BackgroundColor #F7F6FB
+  BorderColor #C9C3E0
+}
+
+actor "Paciente" as PAC
+actor "Medico tratante" as MED <<externo>>
+
+rectangle "MigraPatron IA" {
+
+  package "M0 - Acceso y perfil (soporte)" {
+    usecase "CU-01\nRegistrarse" as UC01
+    usecase "CU-02\nIniciar sesion" as UC02
+    usecase "CU-03\nCerrar sesion" as UC03
+    usecase "CU-04\nGestionar perfil clinico\ny consentimiento" as UC04
+  }
+
+  package "M1 - Captura estructurada (NUCLEO)" {
+    usecase "CU-05\nRegistrar bitacora\ndel dia" as UC05
+    usecase "CU-06\nRegistrar episodio\nde migrana" as UC06
+    usecase "CU-07\nConsultar historial" as UC07
+  }
+
+  package "M2 - Analisis de patrones (NUCLEO)" {
+    usecase "CU-08\nAnalizar mis patrones" as UC08
+    usecase "CU-09\nConsultar el riesgo\ndel dia" as UC09
+  }
+
+  package "M3 - Explicacion y reporte (NUCLEO)" {
+    usecase "CU-10\nConsultar hallazgos\nexplicados" as UC10
+    usecase "CU-11\nValorar la utilidad\nde un hallazgo" as UC11
+    usecase "CU-12\nConsultar panel\nde tendencias" as UC12
+    usecase "CU-13\nGenerar y compartir\nresumen clinico" as UC13
+  }
+}
+
+PAC --> UC01
+PAC --> UC02
+PAC --> UC03
+PAC --> UC04
+PAC --> UC05
+PAC --> UC06
+PAC --> UC07
+PAC --> UC08
+PAC --> UC09
+PAC --> UC10
+PAC --> UC11
+PAC --> UC12
+PAC --> UC13
+
+UC13 --> MED : resumen clinico\n(PDF que el paciente comparte)
+
+UC11 ..> UC10 : <<extend>>
+
+note bottom of UC08
+  Un solo caso de uso. La validacion de
+  suficiencia, Apriori, el arbol de decision
+  y la correlacion temporal NO son casos de
+  uso: son pasos del flujo principal y estan
+  descritos en la especificacion de CU-08.
+end note
+
+note right of UC10
+  RNF-07: ningun hallazgo se muestra sin
+  soporte, confianza, lift, periodo, numero
+  de episodios y la advertencia de que una
+  asociacion no demuestra causalidad.
+end note
+
+note bottom of UC05
+  RNF-04: la bitacora y los episodios se
+  registran sin conexion y se sincronizan al
+  recuperarla. Es un atributo de fiabilidad,
+  no un caso de uso: el paciente nunca tiene
+  la meta de "sincronizar".
+end note
+
+note top of UC04
+  RN-01: sin consentimiento aceptado,
+  CU-08 se rechaza. Es una precondicion,
+  no una relacion <<include>>.
+end note
+
+@enduml
