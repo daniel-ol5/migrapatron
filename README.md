@@ -69,19 +69,45 @@ CREATE DATABASE migrapatron;
 
 ### 2. Backend
 
+**Windows (PowerShell):**
+
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\activate
+
+pip install -r requirements.txt
+Copy-Item .env.example .env
+# Editar .env: poner DB_PASSWORD y, si hace falta, DB_NAME
+python manage.py migrate
+python manage.py seed_privacidad    # publica el aviso de privacidad v1.0
+python manage.py createsuperuser
+python manage.py runserver          # http://127.0.0.1:8000
+```
+
+**Linux / Mac:**
+
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate        # Linux / Mac
-.\venv\Scripts\activate         # Windows
+source venv/bin/activate
 
 pip install -r requirements.txt
-cp .env.example .env            # y editar las credenciales
+cp .env.example .env
+# Editar .env: poner DB_PASSWORD y, si hace falta, DB_NAME
 python manage.py migrate
-python manage.py seed_privacidad  # publica el aviso de privacidad v1.0
+python manage.py seed_privacidad
 python manage.py createsuperuser
-python manage.py runserver        # http://127.0.0.1:8000
+python manage.py runserver
 ```
+
+> **No hace falta exportar variables de entorno.** Todo sale del `.env`. Si
+> alguna vez quieres correr contra SQLite sin levantar PostgreSQL, cambia
+> `DB_ENGINE=sqlite` dentro del `.env` — no uses `export` ni `$env:`.
+
+> `seed_privacidad` **no es opcional**: sin un aviso de privacidad publicado,
+> el registro de usuarios (HU-01) rechaza toda petición con un 400. Es una
+> precondición del modelo de consentimiento, no un dato de adorno.
 
 Documentación de la API en `http://127.0.0.1:8000/api/docs/`.
 
@@ -90,7 +116,7 @@ Documentación de la API en `http://127.0.0.1:8000/api/docs/`.
 ```bash
 cd web
 npm install
-cp .env.example .env
+cp .env.example .env            # PowerShell: Copy-Item .env.example .env
 npm run dev                     # http://localhost:5173
 ```
 
