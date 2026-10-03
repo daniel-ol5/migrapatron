@@ -102,6 +102,40 @@ flutter pub get
 flutter run
 ```
 
+Pantallas implementadas (HU-01 a HU-09):
+
+| Pantalla | Historia |
+|---|---|
+| Login | HU-02 |
+| Registro con aviso de privacidad | HU-01 |
+| Inicio: estado de hoy y avance hacia M2 | HU-07 |
+| Bitácora del día (11 factores) | HU-05, HU-08, HU-09 |
+| Episodio (EVA 1-10 y 4 síntomas) | HU-06, HU-08, HU-09 |
+| Historial con los días sin registrar | HU-07 |
+| Perfil, consentimiento y baja de cuenta | HU-03, HU-04, M0.4 |
+
+### Diseño
+
+Paleta **«Teal sereno»**, definida en [movil/lib/core/tema.dart](movil/lib/core/tema.dart).
+
+| | Oscuro | Claro |
+|---|---|---|
+| Fondo | `#101719` | `#F2F7F7` |
+| Tarjeta | `#182124` | `#FFFFFF` |
+| Borde | `#2D3B3E` | `#D8E6E5` |
+| Texto | `#E2EDEE` | `#0E1A1B` |
+| Apagado | `#9BB0B2` | `#4B6362` |
+| Primario | `#5FB8B0` | `#2B7A73` |
+
+Toda la paleta es de baja luminancia y cromatismo moderado **a propósito**: la
+fotofobia es uno de los cuatro síntomas que la app registra, así que quien abre
+esta pantalla puede estar en medio de un episodio. El tema sigue la preferencia
+del sistema (`ThemeMode.system`).
+
+La escala de intensidad del dolor usa una rampa cálida aparte, nunca el verde
+azulado de marca — así «botón principal» y «dolor intenso» no se confunden.
+Hay una prueba que lo verifica.
+
 La URL base del backend está en `lib/core/config.dart`. Para el emulador de
 Android se usa `10.0.2.2` (el alias del `localhost` de la máquina anfitriona);
 para un dispositivo físico hay que poner la IP LAN.

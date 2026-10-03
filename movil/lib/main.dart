@@ -1,109 +1,159 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import 'core/config.dart';
+import 'core/almacen_seguro.dart';
+import 'core/api_cliente.dart';
+import 'core/tema.dart';
+import 'estado/estado_bitacora.dart';
+import 'estado/estado_sesion.dart';
+import 'pantallas/acceso/login.dart';
+import 'pantallas/historial/historial.dart';
+import 'pantallas/inicio/inicio.dart';
+import 'pantallas/perfil/perfil.dart';
+import 'servicios/servicio_auth.dart';
+import 'servicios/servicio_bitacora.dart';
 
 void main() {
   runApp(const MigraPatronApp());
 }
 
-class MigraPatronApp extends StatelessWidget {
+class MigraPatronApp extends StatefulWidget {
   const MigraPatronApp({super.key});
 
-  static const _semilla = Color(0xFF4B3F8C);
+  @override
+  State<MigraPatronApp> createState() => _MigraPatronAppState();
+}
+
+class _MigraPatronAppState extends State<MigraPatronApp> {
+  late final AlmacenSeguro _almacen;
+  late final ApiCliente _api;
+  late final EstadoSesion _sesion;
+  late final EstadoBitacora _bitacora;
+
+  @override
+  void initState() {
+    super.initState();
+    _almacen = AlmacenSeguro();
+    _api = ApiCliente(
+      almacen: _almacen,
+      // Si el refresh también falla, la sesión cae a la pantalla de acceso.
+      onSesionExpirada: () => _sesion.resolverArranque(),
+    );
+    _sesion = EstadoSesion(
+      auth: ServicioAuth(api: _api, almacen: _almacen),
+    );
+    _bitacora = EstadoBitacora(servicio: ServicioBitacora(api: _api));
+    _sesion.resolverArranque();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MigraPatrón IA',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: _semilla),
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _sesion),
+        ChangeNotifierProvider.value(value: _bitacora),
+      ],
+      child: MaterialApp(
+        title: 'MigraPatrón',
+        debugShowCheckedModeBanner: false,
+        theme: Tema.claro(),
+        darkTheme: Tema.oscuro(),
+        // Sigue la preferencia del teléfono: quien ya lo puso en oscuro por
+        // sensibilidad a la luz lo obtiene sin tocar nada.
+        themeMode: ThemeMode.system,
+        home: const _Router(),
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _semilla,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      home: const PantallaAndamiaje(),
     );
   }
 }
 
-/// Pantalla temporal que confirma que el proyecto compila y corre.
-/// Se reemplaza por el splash router en HU-03.
-class PantallaAndamiaje extends StatelessWidget {
-  const PantallaAndamiaje({super.key});
+/// Decide qué pantalla mostrar según el estado de la sesión.
+class _Router extends StatelessWidget {
+  const _Router();
 
-  static const _pendientes = <(String, String, String)>[
-    ('Iniciar sesión', 'HU-03', 'CU-02'),
-    ('Bitácora del día', 'HU-05', 'CU-05'),
-    ('Registrar episodio', 'HU-06', 'CU-06'),
-    ('Historial', 'HU-07', 'CU-07'),
-    ('Mis patrones', 'HU-15', 'CU-10'),
-    ('Resumen clínico', 'HU-18', 'CU-13'),
-  ];
+  @override
+  Widget build(BuildContext context) {
+    final fase = context.watch<EstadoSesion>().fase;
+
+    return switch (fase) {
+      FaseSesion.cargando => const _Splash(),
+      FaseSesion.fuera => const PantallaLogin(),
+      FaseSesion.dentro => const CascaronPrincipal(),
+    };
+  }
+}
+
+class _Splash extends StatelessWidget {
+  const _Splash();
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('MigraPatrón IA'),
-        backgroundColor: tema.colorScheme.surfaceContainerHighest,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Text('El andamiaje está en pie', style: tema.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(
-            'El proyecto compila. Las pantallas se construyen en el Sprint 1.',
-            style: tema.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Backend: ${Config.apiUrl}',
-            style: tema.textTheme.bodySmall?.copyWith(
-              fontFamily: 'monospace',
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.insights_outlined,
+              size: 40,
               color: tema.colorScheme.primary,
             ),
-          ),
-          const SizedBox(height: 24),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Column(
-              children: [
-                for (final (titulo, historia, caso) in _pendientes)
-                  ListTile(
-                    dense: true,
-                    title: Text(titulo),
-                    trailing: Text(
-                      '$historia · $caso',
-                      style: tema.textTheme.labelSmall?.copyWith(
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: tema.colorScheme.tertiaryContainer,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              Config.avisoNoCausalidad,
-              style: tema.textTheme.bodySmall?.copyWith(
-                color: tema.colorScheme.onTertiaryContainer,
+            const SizedBox(height: Esp.lg),
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: tema.colorScheme.primary,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Navegación principal: inicio, historial y perfil.
+class CascaronPrincipal extends StatefulWidget {
+  const CascaronPrincipal({super.key});
+
+  @override
+  State<CascaronPrincipal> createState() => _CascaronPrincipalState();
+}
+
+class _CascaronPrincipalState extends State<CascaronPrincipal> {
+  int _indice = 0;
+
+  static const _pantallas = [
+    PantallaInicio(),
+    PantallaHistorial(),
+    PantallaPerfil(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pantallas[_indice],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _indice,
+        onDestinationSelected: (i) => setState(() => _indice = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.today_outlined),
+            selectedIcon: Icon(Icons.today),
+            label: 'Hoy',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Historial',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Perfil',
           ),
         ],
       ),
