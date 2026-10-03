@@ -1,4 +1,5 @@
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
 /// Configuración de la app móvil.
 class Config {
@@ -6,16 +7,27 @@ class Config {
 
   /// URL base del backend.
   ///
-  /// En el emulador de Android, `10.0.2.2` es el alias del `localhost` de la
-  /// máquina anfitriona. Para probar en un teléfono físico hay que pasar la IP
-  /// LAN al compilar:
+  /// El emulador de Android no puede usar `127.0.0.1`, porque ahí vive el
+  /// propio emulador: `10.0.2.2` es su alias para el localhost de la máquina
+  /// anfitriona. En el navegador y en escritorio, en cambio, `127.0.0.1` es el
+  /// host real y es lo correcto.
+  ///
+  /// Para un teléfono físico o cualquier otro caso, se pasa la URL al compilar:
   ///
   ///   flutter run --dart-define=API_URL=http://192.168.1.50:8000/api
+  ///
+  /// Se usa `defaultTargetPlatform` y no `Platform` de dart:io porque dart:io
+  /// no existe en el navegador: ahí `Platform.isAndroid` lanza
+  /// «Unsupported operation» y la app no llega ni a pintar la primera pantalla.
   static String get apiUrl {
     const definida = String.fromEnvironment('API_URL');
     if (definida.isNotEmpty) return definida;
-    if (Platform.isAndroid) return 'http://10.0.2.2:8000/api';
-    return 'http://127.0.0.1:8000/api';
+
+    final enEmuladorAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    return enEmuladorAndroid
+        ? 'http://10.0.2.2:8000/api'
+        : 'http://127.0.0.1:8000/api';
   }
 
   /// Días que analiza el motor por defecto (M2).

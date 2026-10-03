@@ -125,8 +125,28 @@ npm run dev                     # http://localhost:5173
 ```bash
 cd movil
 flutter pub get
-flutter run
+flutter run                 # con un emulador o dispositivo conectado
 ```
+
+**Sin emulador, en Chrome** (lo más rápido para ver la app):
+
+```bash
+flutter run -d chrome --web-port=5174
+```
+
+El puerto `5174` no es arbitrario: es el que el backend tiene permitido en
+`CORS_ALLOWED_ORIGINS`. Con un puerto distinto, el navegador bloquea cada
+petición a la API y la app se queda en blanco sin explicar por qué.
+
+Para un **teléfono físico**, hay que pasar la IP de tu máquina:
+
+```bash
+flutter run --dart-define=API_URL=http://192.168.1.50:8000/api
+```
+
+> La URL por defecto cambia según dónde corre la app: `10.0.2.2` en el
+> emulador de Android (su alias para el localhost del anfitrión) y `127.0.0.1`
+> en navegador y escritorio. Ver `movil/lib/core/config.dart`.
 
 Pantallas implementadas (HU-01 a HU-09):
 

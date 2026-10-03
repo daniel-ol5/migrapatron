@@ -1,109 +1,143 @@
-import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
-import { almacen } from './core/almacen';
-import { AVISO_NO_CAUSALIDAD } from './core/config';
-import './App.css';
+import {
+  BrowserRouter,
+  Navigate,
+  NavLink,
+  Outlet,
+  Route,
+  Routes,
+} from 'react-router-dom';
+
+import { Cargando } from './componentes';
+import { useSesion } from './estado/contextoSesion';
+import { ProveedorSesion } from './estado/SesionContext';
+import Bitacora from './paginas/Bitacora';
+import EpisodioPagina from './paginas/EpisodioPagina';
+import HistorialPagina from './paginas/HistorialPagina';
+import Inicio from './paginas/Inicio';
+import Login from './paginas/Login';
+import Perfil from './paginas/Perfil';
+import Registro from './paginas/Registro';
+
+import './estilos/tokens.css';
+import './estilos/base.css';
 
 /**
  * Envuelve las rutas que exigen sesión iniciada.
- * Cuando exista la pantalla de acceso (HU-03), redirige a ella.
+ *
+ * Mientras se resuelve el arranque muestra un cargando, porque redirigir al
+ * login antes de saber si hay sesión haría parpadear la pantalla de acceso a
+ * quien ya está dentro.
  */
-function RutaPrivada({ children }: { children: React.ReactNode }) {
-  return almacen.haySesion ? <>{children}</> : <Navigate to="/acceso" replace />;
-}
+function RutaPrivada() {
+  const { fase } = useSesion();
 
-function Andamiaje() {
+  if (fase === 'cargando') {
+    return (
+      <div className="centrado">
+        <Cargando texto="Entrando…" />
+      </div>
+    );
+  }
+  if (fase === 'fuera') return <Navigate to="/login" replace />;
+
   return (
-    <main className="andamiaje">
-      <p className="eyebrow">MigraPatrón IA · cliente web</p>
-      <h1>El andamiaje está en pie</h1>
-      <p>
-        El proyecto compila y las rutas funcionan. Las pantallas se construyen
-        en el Sprint&nbsp;1: acceso, bitácora diaria y episodios.
-      </p>
-
-      <ul className="rutas">
-        <li>
-          <code>/acceso</code> — iniciar sesión <span>HU-03 · CU-02</span>
-        </li>
-        <li>
-          <code>/bitacora</code> — registrar el día <span>HU-05 · CU-05</span>
-        </li>
-        <li>
-          <code>/episodios</code> — registrar episodio <span>HU-06 · CU-06</span>
-        </li>
-        <li>
-          <code>/hallazgos</code> — patrones explicados <span>HU-15 · CU-10</span>
-        </li>
-        <li>
-          <code>/reporte</code> — resumen clínico <span>HU-18 · CU-13</span>
-        </li>
-      </ul>
-
-      <p className="aviso">{AVISO_NO_CAUSALIDAD}</p>
-
-      <p className="pie">
-        <Link to="/acceso">Ir a acceso</Link>
-      </p>
-    </main>
+    <>
+      <Cabecera />
+      <Outlet />
+    </>
   );
 }
 
-function PorConstruir({ titulo, historia }: { titulo: string; historia: string }) {
+/** Solo para quien NO tiene sesión: evita volver al login estando dentro. */
+function RutaPublica({ children }: { children: React.ReactNode }) {
+  const { fase } = useSesion();
+
+  if (fase === 'cargando') {
+    return (
+      <div className="centrado">
+        <Cargando />
+      </div>
+    );
+  }
+  if (fase === 'dentro') return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+}
+
+function Cabecera() {
   return (
-    <main className="andamiaje">
-      <p className="eyebrow">{historia}</p>
-      <h1>{titulo}</h1>
-      <p>Esta pantalla todavía no está construida.</p>
-      <p className="pie">
-        <Link to="/">Volver al inicio</Link>
-      </p>
-    </main>
+    <header className="cabecera">
+      <div className="cabecera-interior">
+        <NavLink to="/" className="marca">
+          <span aria-hidden="true">◉</span>
+          <span>MigraPatrón</span>
+        </NavLink>
+
+        <nav className="nav" aria-label="Navegación principal">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `nav-enlace${isActive ? ' activo' : ''}`
+            }
+          >
+            Hoy
+          </NavLink>
+          <NavLink
+            to="/historial"
+            className={({ isActive }) =>
+              `nav-enlace${isActive ? ' activo' : ''}`
+            }
+          >
+            Historial
+          </NavLink>
+          <NavLink
+            to="/perfil"
+            className={({ isActive }) =>
+              `nav-enlace${isActive ? ' activo' : ''}`
+            }
+          >
+            Perfil
+          </NavLink>
+        </nav>
+      </div>
+    </header>
   );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Andamiaje />} />
-        <Route
-          path="/acceso"
-          element={<PorConstruir titulo="Iniciar sesión" historia="HU-03 · CU-02" />}
-        />
-        <Route
-          path="/bitacora"
-          element={
-            <RutaPrivada>
-              <PorConstruir titulo="Bitácora del día" historia="HU-05 · CU-05" />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/episodios"
-          element={
-            <RutaPrivada>
-              <PorConstruir titulo="Episodios" historia="HU-06 · CU-06" />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/hallazgos"
-          element={
-            <RutaPrivada>
-              <PorConstruir titulo="Mis patrones" historia="HU-15 · CU-10" />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/reporte"
-          element={
-            <RutaPrivada>
-              <PorConstruir titulo="Resumen clínico" historia="HU-18 · CU-13" />
-            </RutaPrivada>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ProveedorSesion>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <RutaPublica>
+                <Login />
+              </RutaPublica>
+            }
+          />
+          <Route
+            path="/registro"
+            element={
+              <RutaPublica>
+                <Registro />
+              </RutaPublica>
+            }
+          />
+
+          <Route element={<RutaPrivada />}>
+            <Route path="/" element={<Inicio />} />
+            <Route path="/bitacora" element={<Bitacora />} />
+            <Route path="/historial" element={<HistorialPagina />} />
+            <Route path="/episodio/:id" element={<EpisodioPagina />} />
+            <Route path="/perfil" element={<Perfil />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ProveedorSesion>
     </BrowserRouter>
   );
 }

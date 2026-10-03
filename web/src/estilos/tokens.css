@@ -1,0 +1,98 @@
+/**
+ * Sistema de color de MigraPatrón: paleta «Teal sereno».
+ *
+ * Misma paleta que el móvil (movil/lib/core/tema.dart). Si cambia una, cambian
+ * las dos: un paciente que usa los dos clientes no debería ver dos productos.
+ *
+ * Toda la paleta es de baja luminancia y cromatismo moderado a propósito. La
+ * fotofobia es uno de los cuatro síntomas que la app registra, así que quien
+ * abre esta pantalla puede estar en medio de un episodio y con los ojos
+ * sensibles. Por eso tampoco hay azul brillante ni rojo saturado.
+ *
+ * El verde azulado está reservado a la marca y a las acciones. La escala de
+ * intensidad del dolor usa una rampa cálida aparte, para que nunca se confunda
+ * «este es el botón principal» con «este dolor fue intenso».
+ */
+
+:root {
+  /* ----------------------------------------------------- tema claro */
+  --fondo: #f2f7f7;
+  --tarjeta: #ffffff;
+  --tarjeta-alta: #e9f2f1;
+  --borde: #d8e6e5;
+  --texto: #0e1a1b;
+  --apagado: #4b6362;
+  --primario: #2b7a73;
+  --sobre-primario: #ffffff;
+
+  --exito: #3d7a55;
+  --aviso: #8a6220;
+  --error: #9b3d3d;
+
+  /* ------------------------------------------- escala EVA del dolor
+     Va de un amarillo pálido a un rosa profundo. Deliberadamente NO llega al
+     rojo puro: un 10 ya se comunica por su posición en la escala y por el
+     número; saturar el color solo agrega agresión visual. */
+  --eva-1: #cbc77a;
+  --eva-2: #d4be71;
+  --eva-3: #dbb168;
+  --eva-4: #dfa263;
+  --eva-5: #e09360;
+  --eva-6: #dc8361;
+  --eva-7: #d57465;
+  --eva-8: #c9666a;
+  --eva-9: #ba5b6e;
+  --eva-10: #a8536f;
+
+  /* ------------------------------------------------------- espaciado */
+  --esp-xs: 4px;
+  --esp-sm: 8px;
+  --esp-md: 16px;
+  --esp-lg: 24px;
+  --esp-xl: 32px;
+  --esp-xxl: 48px;
+
+  --radio: 10px;
+  --radio-grande: 14px;
+
+  --ancho-maximo: 760px;
+  --ancho-formulario: 420px;
+
+  --fuente:
+    system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --fuente-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
+/* El tema sigue la preferencia del sistema, igual que el móvil. Quien ya puso
+   su equipo en oscuro por sensibilidad a la luz lo obtiene sin tocar nada. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='claro']) {
+    --fondo: #101719;
+    --tarjeta: #182124;
+    --tarjeta-alta: #1f2b2e;
+    --borde: #2d3b3e;
+    --texto: #e2edee;
+    --apagado: #9bb0b2;
+    --primario: #5fb8b0;
+    --sobre-primario: #101719;
+
+    --exito: #4e9a6b;
+    --aviso: #c08a3e;
+    --error: #c46b6b;
+  }
+}
+
+:root[data-tema='oscuro'] {
+  --fondo: #101719;
+  --tarjeta: #182124;
+  --tarjeta-alta: #1f2b2e;
+  --borde: #2d3b3e;
+  --texto: #e2edee;
+  --apagado: #9bb0b2;
+  --primario: #5fb8b0;
+  --sobre-primario: #101719;
+
+  --exito: #4e9a6b;
+  --aviso: #c08a3e;
+  --error: #c46b6b;
+}
