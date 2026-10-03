@@ -182,6 +182,22 @@ CORS_ALLOWED_ORIGINS = config(
 )
 CORS_ALLOW_CREDENTIALS = True
 
+if DEBUG:
+    # En desarrollo se acepta cualquier puerto de localhost.
+    #
+    # Flutter web elige un puerto al azar en cada arranque (64241, 51832, ...),
+    # asi que una lista fija de puertos obliga a recordar --web-port en cada
+    # ejecucion. Olvidarlo produce un error de CORS que no dice que falto: la
+    # app carga bien y ninguna peticion funciona.
+    #
+    # Sigue siendo restrictivo: solo localhost y 127.0.0.1, nunca un dominio
+    # externo. Y solo con DEBUG=True, de modo que en produccion rige la lista
+    # explicita de arriba.
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^http://localhost:\d+$",
+        r"^http://127\.0\.0\.1:\d+$",
+    ]
+
 # ---------------------------------------------------------------- motor
 # Parámetros por defecto del motor de patrones. Se pueden sobrescribir por
 # petición; quedan guardados en analisis.parametros para que cada corrida sea

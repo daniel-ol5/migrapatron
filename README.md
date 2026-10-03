@@ -131,12 +131,12 @@ flutter run                 # con un emulador o dispositivo conectado
 **Sin emulador, en Chrome** (lo más rápido para ver la app):
 
 ```bash
-flutter run -d chrome --web-port=5174
+flutter run -d chrome
 ```
 
-El puerto `5174` no es arbitrario: es el que el backend tiene permitido en
-`CORS_ALLOWED_ORIGINS`. Con un puerto distinto, el navegador bloquea cada
-petición a la API y la app se queda en blanco sin explicar por qué.
+Flutter elige un puerto al azar y no importa: con `DEBUG=True` el backend acepta
+cualquier puerto de `localhost`. En producción rige la lista explícita de
+`CORS_ALLOWED_ORIGINS`.
 
 Para un **teléfono físico**, hay que pasar la IP de tu máquina:
 
@@ -187,6 +187,18 @@ Android se usa `10.0.2.2` (el alias del `localhost` de la máquina anfitriona);
 para un dispositivo físico hay que poner la IP LAN.
 
 ---
+
+## Si la app no conecta con la API
+
+Dos errores que aparecen en la consola del navegador y se confunden entre sí:
+
+| Lo que dice la consola | Qué pasa | Solución |
+|---|---|---|
+| `ERR_CONNECTION_REFUSED` | El backend no está corriendo | Arrancarlo: `python manage.py runserver` |
+| `blocked by CORS policy` | El origen no está permitido | Verificar que `DEBUG=True` en `backend/.env` |
+
+El primero es el más común y el más fácil de pasar por alto: la app carga
+perfectamente y todas las peticiones fallan, porque no hay nadie del otro lado.
 
 ## Flujo de trabajo
 
