@@ -35,9 +35,10 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    "apps.cuentas",
-    "apps.bitacora",
-    "apps.analisis",
+    "apps.m0_usuarios",  # Gestion de Usuarios y Privacidad
+    "apps.m1_bitacora",  # Seguimiento y Bitacora Diaria
+    "apps.m2_analisis",  # Analisis Inteligente de Datos
+    "apps.m3_reportes",  # Explicabilidad y Reportes
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -73,21 +74,37 @@ TEMPLATES = [
 ]
 
 # ---------------------------------------------------------------- base de datos
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="migrapatron"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default=""),
-        "HOST": config("DB_HOST", default="127.0.0.1"),
-        "PORT": config("DB_PORT", default="5432"),
-    }
+# PostgreSQL es la base real. DB_ENGINE=sqlite permite correr la suite de
+# pruebas sin levantar un servidor; CI usa postgres:16 de verdad.
+_MOTORES = {
+    "postgresql": "django.db.backends.postgresql",
+    "sqlite": "django.db.backends.sqlite3",
 }
+_MOTOR = config("DB_ENGINE", default="postgresql")
+
+if _MOTOR == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": _MOTORES["sqlite"],
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": _MOTORES["postgresql"],
+            "NAME": config("DB_NAME", default="migrapatron"),
+            "USER": config("DB_USER", default="postgres"),
+            "PASSWORD": config("DB_PASSWORD", default=""),
+            "HOST": config("DB_HOST", default="127.0.0.1"),
+            "PORT": config("DB_PORT", default="5432"),
+        }
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# El paciente se identifica por email, no por username: ver apps/cuentas/models.py
-AUTH_USER_MODEL = "cuentas.Usuario"
+# El paciente se identifica por email: ver apps/m0_usuarios/models.py
+AUTH_USER_MODEL = "m0_usuarios.Usuario"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -171,17 +188,20 @@ CORS_ALLOW_CREDENTIALS = True
 # reproducible (RN-06).
 MOTOR = {
     "VERSION": "0.1.0",
+    # ---- M2.1 criterios minimos de evidencia
+    "MINIMO_BITACORAS": 20,
+    "MINIMO_EPISODIOS": 3,
+    # ---- M2.2 vinculacion temporal
+    "VENTANA_HORAS": 48,
     "PERIODO_DIAS": 90,
-    "LAG_DIAS": 1,
-    "MINIMO_DIAS": 14,  # RN-02
-    "MINIMO_EPISODIOS": 3,  # RN-02
-    "SOPORTE_MIN": 0.10,  # RN-03
-    "CONFIANZA_MIN": 0.60,  # RN-03
-    "LIFT_MIN": 1.20,  # RN-03
-    "MAX_ITEMS_ANTECEDENTE": 3,  # RN-03
-    "MAX_HALLAZGOS": 10,  # RN-03
-    "PROFUNDIDAD_ARBOL": 3,
-    "MIN_MUESTRAS_HOJA": 5,
+    # ---- M2.3 filtrado de reglas
+    "SOPORTE_MIN": 0.10,
+    "CONFIANZA_MIN": 0.60,
+    "LIFT_MIN": 1.20,
+    "CASOS_MIN": 3,
+    "ALFA": 0.05,
+    "MAX_ITEMS_ANTECEDENTE": 3,
+    "MAX_HALLAZGOS": 10,
 }
 
 # ---------------------------------------------------------------- endurecido

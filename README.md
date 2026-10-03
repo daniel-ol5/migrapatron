@@ -20,11 +20,26 @@ Proyecto de la materia **Ingeniería de la Calidad** · metodología SCRUM ·
 
 ```
 Calidad/
-├─ backend/     Django 5 + DRF + el motor de patrones (Python)
+├─ backend/     Django 6.1 + DRF + el motor de patrones (Python)
+│  └─ apps/
+│     ├─ m0_usuarios/   Gestión de Usuarios y Privacidad
+│     ├─ m1_bitacora/   Seguimiento y Bitácora Diaria
+│     ├─ m2_analisis/   Análisis Inteligente de Datos
+│     ├─ m3_reportes/   Explicabilidad y Reportes
+│     └─ comun/         Permisos de aislamiento y auditoría
 ├─ movil/       App Flutter (cliente principal del paciente)
 ├─ web/         Cliente web React + TypeScript + Vite
 └─ docs/        Plan de proyecto, diagramas PlantUML, plan de pruebas
 ```
+
+### Los cuatro módulos
+
+| Módulo | Qué administra | Estado |
+|---|---|---|
+| **M0** Gestión de Usuarios y Privacidad | Identidad, sesión, consentimiento versionado, baja de cuenta | Implementado (HU-01 a HU-04) |
+| **M1** Seguimiento y Bitácora Diaria | Hábitos cotidianos, episodios, historial, edición y borrado | Implementado (HU-05 a HU-09) |
+| **M2** Análisis Inteligente de Datos | Apriori, ventana de 48 h, Fisher y Benjamini-Hochberg | Modelos listos, motor pendiente |
+| **M3** Explicabilidad y Reportes | Plantillas controladas, advertencia obligatoria, resumen imprimible | Modelos listos, generación pendiente |
 
 El **backend es la fuente de verdad**. Los dos clientes hablan con él por REST
 usando `Authorization: Bearer <access_token>`.
@@ -63,9 +78,9 @@ source venv/bin/activate        # Linux / Mac
 pip install -r requirements.txt
 cp .env.example .env            # y editar las credenciales
 python manage.py migrate
-python manage.py seed_catalogos # factores, reglas, síntomas, alimentos
+python manage.py seed_privacidad  # publica el aviso de privacidad v1.0
 python manage.py createsuperuser
-python manage.py runserver      # http://127.0.0.1:8000
+python manage.py runserver        # http://127.0.0.1:8000
 ```
 
 Documentación de la API en `http://127.0.0.1:8000/api/docs/`.
@@ -127,11 +142,12 @@ Una historia está terminada cuando cumple las ocho:
 ## Comandos de calidad
 
 ```bash
-# Backend
+# Backend  (las pruebas corren sobre SQLite en memoria; CI usa PostgreSQL real)
 cd backend
 pytest --cov=apps --cov-report=term-missing
 ruff check .
 black --check .
+python manage.py spectacular --fail-on-warn --file /dev/null
 
 # Web
 cd web

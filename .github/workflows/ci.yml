@@ -54,12 +54,22 @@ jobs:
         env:
           SECRET_KEY: clave-solo-para-ci
           DEBUG: 'False'
+          # DB_ENGINE=postgresql hace que config.settings_test use el servicio
+          # de arriba en lugar de SQLite: en CI la suite corre contra el motor
+          # real, que es donde se validan restricciones y transacciones.
+          DB_ENGINE: postgresql
           DB_NAME: migrapatron_test
           DB_USER: postgres
           DB_PASSWORD: postgres
           DB_HOST: localhost
           DB_PORT: '5432'
         run: pytest --cov=apps --cov-report=xml --cov-report=term-missing
+
+      - name: Esquema OpenAPI sin errores
+        env:
+          SECRET_KEY: clave-solo-para-ci
+          DB_ENGINE: sqlite
+        run: python manage.py spectacular --fail-on-warn --file /dev/null
 
       - name: Guardar reporte de cobertura
         uses: actions/upload-artifact@v4

@@ -1,4 +1,4 @@
-"""Rutas raíz de MigraPatrón IA."""
+"""Rutas raiz de MigraPatron IA."""
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -8,13 +8,15 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # Módulo M0 - acceso y perfil
-    path("api/auth/", include("apps.cuentas.urls")),
-    # Módulo M1 - captura estructurada
-    path("api/", include("apps.bitacora.urls")),
-    # Módulos M2 y M3 - análisis, hallazgos y reporte
-    path("api/", include("apps.analisis.urls")),
-    # Documentación
+    # M0 - Gestion de Usuarios y Privacidad
+    path("api/auth/", include("apps.m0_usuarios.urls")),
+    # M1 - Seguimiento y Bitacora Diaria
+    path("api/", include("apps.m1_bitacora.urls")),
+    # M2 - Analisis Inteligente de Datos
+    path("api/", include("apps.m2_analisis.urls")),
+    # M3 - Explicabilidad y Reportes
+    path("api/", include("apps.m3_reportes.urls")),
+    # Documentacion
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",
