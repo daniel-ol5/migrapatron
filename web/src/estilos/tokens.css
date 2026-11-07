@@ -1,48 +1,48 @@
 /**
- * Sistema de color de MigraPatrón: paleta «Teal sereno».
+ * Sistema de color de MigraPatrón IA: Paleta clínica y serena.
  *
- * Misma paleta que el móvil (movil/lib/core/tema.dart). Si cambia una, cambian
- * las dos: un paciente que usa los dos clientes no debería ver dos productos.
+ * Colores de marca:
+ * - Primario: #4B97C5 (Azul océano sereno / Acciones principales)
+ * - Secundario: #7BB2D8 (Celeste suave / Acentos, hover y foco)
+ * - Neutro oscuro: #273B40 (Pizarra azulado profundo / Texto y tarjetas oscuras)
+ * - Fondo suave: #E6F2F7 (Hielo azulado suave / Fondo descansado y limpio)
  *
- * Toda la paleta es de baja luminancia y cromatismo moderado a propósito. La
- * fotofobia es uno de los cuatro síntomas que la app registra, así que quien
- * abre esta pantalla puede estar en medio de un episodio y con los ojos
- * sensibles. Por eso tampoco hay azul brillante ni rojo saturado.
- *
- * El verde azulado está reservado a la marca y a las acciones. La escala de
- * intensidad del dolor usa una rampa cálida aparte, para que nunca se confunda
- * «este es el botón principal» con «este dolor fue intenso».
+ * Diseñada para baja agresividad visual, eliminando el contraste estridente
+ * para pacientes con fotofobia y proporcionando un aspecto profesional médico.
  */
 
 :root {
-  /* ----------------------------------------------------- tema claro */
-  --fondo: #f2f7f7;
+  /* ----------------------------------------------------- tema claro (por defecto) */
+  --fondo: #e6f2f7;
   --tarjeta: #ffffff;
-  --tarjeta-alta: #e9f2f1;
-  --borde: #d8e6e5;
-  --texto: #0e1a1b;
-  --apagado: #4b6362;
-  --primario: #2b7a73;
+  --tarjeta-alta: #f2f8fa;
+  --borde: #cfe2eb;
+  --borde-fuerte: #b2d2e0;
+  --texto: #273b40;
+  --apagado: #5d7980;
+  --primario: #4b97c5;
+  --primario-hover: #3c86b4;
+  --secundario: #7bb2d8;
   --sobre-primario: #ffffff;
 
-  --exito: #3d7a55;
-  --aviso: #8a6220;
-  --error: #9b3d3d;
+  --sombra-suave: 0 4px 16px rgba(39, 59, 64, 0.05), 0 1px 3px rgba(39, 59, 64, 0.03);
+  --sombra-media: 0 8px 24px rgba(39, 59, 64, 0.08), 0 2px 6px rgba(39, 59, 64, 0.04);
 
-  /* ------------------------------------------- escala EVA del dolor
-     Va de un amarillo pálido a un rosa profundo. Deliberadamente NO llega al
-     rojo puro: un 10 ya se comunica por su posición en la escala y por el
-     número; saturar el color solo agrega agresión visual. */
-  --eva-1: #cbc77a;
-  --eva-2: #d4be71;
-  --eva-3: #dbb168;
-  --eva-4: #dfa263;
-  --eva-5: #e09360;
-  --eva-6: #dc8361;
-  --eva-7: #d57465;
-  --eva-8: #c9666a;
-  --eva-9: #ba5b6e;
-  --eva-10: #a8536f;
+  --exito: #328557;
+  --aviso: #b87c28;
+  --error: #b94444;
+
+  /* ------------------------------------------- escala EVA del dolor (1-10) */
+  --eva-1: #9cc69b;
+  --eva-2: #b8cf89;
+  --eva-3: #d7d67b;
+  --eva-4: #dfbf6c;
+  --eva-5: #e09f61;
+  --eva-6: #db835e;
+  --eva-7: #d26a63;
+  --eva-8: #c4556a;
+  --eva-9: #b3426e;
+  --eva-10: #9f316e;
 
   /* ------------------------------------------------------- espaciado */
   --esp-xs: 4px;
@@ -52,29 +52,35 @@
   --esp-xl: 32px;
   --esp-xxl: 48px;
 
+  --radio-sm: 6px;
   --radio: 10px;
-  --radio-grande: 14px;
+  --radio-grande: 16px;
 
-  --ancho-maximo: 760px;
-  --ancho-formulario: 420px;
+  --ancho-maximo: 780px;
+  --ancho-formulario: 440px;
 
   --fuente:
     system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --fuente-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
 }
 
-/* El tema sigue la preferencia del sistema, igual que el móvil. Quien ya puso
-   su equipo en oscuro por sensibilidad a la luz lo obtiene sin tocar nada. */
+/* ----------------------------------------------------- tema oscuro elegante */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema='claro']) {
-    --fondo: #101719;
-    --tarjeta: #182124;
-    --tarjeta-alta: #1f2b2e;
-    --borde: #2d3b3e;
-    --texto: #e2edee;
-    --apagado: #9bb0b2;
-    --primario: #5fb8b0;
-    --sobre-primario: #101719;
+    --fondo: #1a282c;
+    --tarjeta: #273b40;
+    --tarjeta-alta: #334a50;
+    --borde: #3f5b63;
+    --borde-fuerte: #53757e;
+    --texto: #e6f2f7;
+    --apagado: #96b5bd;
+    --primario: #7bb2d8;
+    --primario-hover: #96c4e4;
+    --secundario: #4b97c5;
+    --sobre-primario: #162427;
+
+    --sombra-suave: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --sombra-media: 0 8px 24px rgba(0, 0, 0, 0.3);
 
     --exito: #4e9a6b;
     --aviso: #c08a3e;
@@ -83,14 +89,20 @@
 }
 
 :root[data-tema='oscuro'] {
-  --fondo: #101719;
-  --tarjeta: #182124;
-  --tarjeta-alta: #1f2b2e;
-  --borde: #2d3b3e;
-  --texto: #e2edee;
-  --apagado: #9bb0b2;
-  --primario: #5fb8b0;
-  --sobre-primario: #101719;
+  --fondo: #1a282c;
+  --tarjeta: #273b40;
+  --tarjeta-alta: #334a50;
+  --borde: #3f5b63;
+  --borde-fuerte: #53757e;
+  --texto: #e6f2f7;
+  --apagado: #96b5bd;
+  --primario: #7bb2d8;
+  --primario-hover: #96c4e4;
+  --secundario: #4b97c5;
+  --sobre-primario: #162427;
+
+  --sombra-suave: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --sombra-media: 0 8px 24px rgba(0, 0, 0, 0.3);
 
   --exito: #4e9a6b;
   --aviso: #c08a3e;

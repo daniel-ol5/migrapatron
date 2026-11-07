@@ -1,13 +1,26 @@
-"""
-Rutas de M2 - Analisis Inteligente de Datos.
+"""Rutas de M2 - Análisis Inteligente y Predicción Personal Supervisada."""
 
-Se implementan en el Sprint 2. El motor vive en apps/m2_analisis/motor/ como
-Python puro, sin Django, para que sus pruebas corran sin base de datos.
-"""
+from django.urls import path
+
+from . import views
 
 app_name = "m2_analisis"
 
 urlpatterns = [
-    # path("analisis/", EjecutarAnalisisView.as_view()),      # M2.1, M2.2, M2.3
-    # path("analisis/ultimo/", UltimoAnalisisView.as_view()),
+    # M2.1 / M2.2 / M2.3: Ejecutar análisis supervisado L2 y estimación
+    path("analisis/", views.EjecutarAnalisisView.as_view(), name="analisis-ejecutar"),
+    # CU-10 / HU-11: Última estimación
+    path("analisis/ultimo/", views.UltimoAnalisisView.as_view(), name="analisis-ultimo"),
+    # RF-07A: Estado de suficiencia y avance (barra 60 días)
+    path(
+        "analisis/suficiencia/",
+        views.EstadoSuficienciaView.as_view(),
+        name="analisis-suficiencia",
+    ),
+    # HU-18 / RF-15: Conteo de medicación de rescate en 30 días
+    path(
+        "analisis/medicacion/",
+        views.AlertaMedicacionView.as_view(),
+        name="analisis-medicacion",
+    ),
 ]

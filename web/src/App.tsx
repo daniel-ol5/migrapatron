@@ -10,6 +10,7 @@ import {
 import { Cargando } from './componentes';
 import { useSesion } from './estado/contextoSesion';
 import { ProveedorSesion } from './estado/SesionContext';
+import AnalisisPagina from './paginas/AnalisisPagina';
 import Bitacora from './paginas/Bitacora';
 import EpisodioPagina from './paginas/EpisodioPagina';
 import HistorialPagina from './paginas/HistorialPagina';
@@ -92,6 +93,14 @@ function Cabecera() {
             Historial
           </NavLink>
           <NavLink
+            to="/analisis"
+            className={({ isActive }) =>
+              `nav-enlace${isActive ? ' activo' : ''}`
+            }
+          >
+            Análisis
+          </NavLink>
+          <NavLink
             to="/perfil"
             className={({ isActive }) =>
               `nav-enlace${isActive ? ' activo' : ''}`
@@ -131,6 +140,7 @@ export default function App() {
             <Route path="/" element={<Inicio />} />
             <Route path="/bitacora" element={<Bitacora />} />
             <Route path="/historial" element={<HistorialPagina />} />
+            <Route path="/analisis" element={<AnalisisPagina />} />
             <Route path="/episodio/:id" element={<EpisodioPagina />} />
             <Route path="/perfil" element={<Perfil />} />
           </Route>

@@ -36,4 +36,10 @@ urlpatterns = [
     ),  # HU-08, HU-09
     # M1.3 Consulta del historial propio
     path("historial/", views.HistorialView.as_view(), name="historial"),  # HU-07
+    # M4 Alerta de bandera roja (HU-17 / RF-14)
+    path(
+        "alertas/<int:pk>/confirmar/",
+        views.ConfirmarAlertaBanderaRojaView.as_view(),
+        name="alerta-confirmar",
+    ),
 ]

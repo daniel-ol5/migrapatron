@@ -244,6 +244,7 @@ class EventoAuditoria(models.Model):
         ELIMINACION = "ELIMINACION", "Eliminación de registro"
         BAJA_CUENTA = "BAJA_CUENTA", "Eliminación de cuenta"
         ANALISIS = "ANALISIS", "Ejecución de análisis"
+        ALERTA_BANDERA_ROJA = "ALERTA_BANDERA_ROJA", "Alerta de bandera roja emitida"
 
     usuario = models.ForeignKey(
         Usuario,

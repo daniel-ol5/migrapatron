@@ -15,22 +15,22 @@ class Paleta {
   const Paleta._();
 
   // ------------------------------------------------------------ tema oscuro
-  static const fondoOscuro = Color(0xFF101719);
-  static const tarjetaOscuro = Color(0xFF182124);
-  static const tarjetaAltaOscuro = Color(0xFF1F2B2E);
-  static const bordeOscuro = Color(0xFF2D3B3E);
-  static const textoOscuro = Color(0xFFE2EDEE);
-  static const apagadoOscuro = Color(0xFF9BB0B2);
-  static const primarioOscuro = Color(0xFF5FB8B0);
+  static const fondoOscuro = Color(0xFF1B292C);
+  static const tarjetaOscuro = Color(0xFF273B40);
+  static const tarjetaAltaOscuro = Color(0xFF334C52);
+  static const bordeOscuro = Color(0xFF436067);
+  static const textoOscuro = Color(0xFFE6F2F7);
+  static const apagadoOscuro = Color(0xFF9FBECB);
+  static const primarioOscuro = Color(0xFF7BB2D8);
 
   // ------------------------------------------------------------- tema claro
-  static const fondoClaro = Color(0xFFF2F7F7);
+  static const fondoClaro = Color(0xFFE6F2F7);
   static const tarjetaClaro = Color(0xFFFFFFFF);
-  static const tarjetaAltaClaro = Color(0xFFE9F2F1);
-  static const bordeClaro = Color(0xFFD8E6E5);
-  static const textoClaro = Color(0xFF0E1A1B);
-  static const apagadoClaro = Color(0xFF4B6362);
-  static const primarioClaro = Color(0xFF2B7A73);
+  static const tarjetaAltaClaro = Color(0xFFDCEAF2);
+  static const bordeClaro = Color(0xFFC3DCE8);
+  static const textoClaro = Color(0xFF273B40);
+  static const apagadoClaro = Color(0xFF5A757D);
+  static const primarioClaro = Color(0xFF4B97C5);
 
   // ---------------------------------------------------------- semánticos
   // Cálidos y desaturados: un rojo saturado sobre fondo oscuro vibra y cansa

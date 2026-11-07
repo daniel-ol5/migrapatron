@@ -447,7 +447,7 @@ function FormularioBaja({
           if (puede) void onConfirmar(password);
         }}
       >
-        <h3 style={{ color: 'var(--error)' }}>⚠ Eliminar mi cuenta</h3>
+        <h3 style={{ color: 'var(--error)' }}>Eliminar mi cuenta</h3>
         <p className="apagado" style={{ margin: 'var(--esp-md) 0' }}>
           Se borran tu cuenta, tu perfil, tus bitácoras y tus episodios. Esta
           acción no se puede deshacer y no hay forma de recuperar los datos.

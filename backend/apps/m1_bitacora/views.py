@@ -19,8 +19,9 @@ from apps.comun.auditoria import asentar
 from apps.comun.permisos import QuerysetPropioMixin
 from apps.m0_usuarios.models import EventoAuditoria
 
-from .models import Episodio, RegistroDiario
+from .models import AlertaBanderaRoja, Episodio, RegistroDiario
 from .serializers import (
+    AlertaBanderaRojaSerializer,
     DiaHistorialSerializer,
     EpisodioSerializer,
     RegistroDiarioSerializer,
@@ -149,6 +150,26 @@ class EpisodioListCreateView(QuerysetPropioMixin, generics.ListCreateAPIView):
         episodio.vincular_bitacora()
         episodio.save(update_fields=["registro_diario"])
 
+        # HU-17 / RF-14: Evaluación de bandera roja (cefalea en trueno)
+        if episodio.intensidad == 10 and episodio.inicio_subito:
+            alerta, _ = AlertaBanderaRoja.objects.get_or_create(
+                episodio=episodio,
+                defaults={
+                    "mensaje": (
+                        "Un dolor de cabeza súbito e intenso puede requerir atención urgente. "
+                        "Busque servicios de emergencia locales ahora."
+                    ),
+                },
+            )
+            asentar(
+                EventoAuditoria.Accion.ALERTA_BANDERA_ROJA,
+                usuario=self.request.user,
+                request=self.request,
+                entidad="alerta_bandera_roja",
+                entidad_id=alerta.pk,
+                episodio_id=episodio.pk,
+            )
+
         asentar(
             EventoAuditoria.Accion.CREACION,
             usuario=self.request.user,
@@ -179,6 +200,26 @@ class EpisodioDetalleView(QuerysetPropioMixin, generics.RetrieveUpdateDestroyAPI
         if "inicio" in serializer.validated_data:
             episodio.vincular_bitacora()
             episodio.save(update_fields=["registro_diario"])
+
+        # HU-17 / RF-14: Evaluación de bandera roja
+        if episodio.intensidad == 10 and episodio.inicio_subito:
+            alerta, _ = AlertaBanderaRoja.objects.get_or_create(
+                episodio=episodio,
+                defaults={
+                    "mensaje": (
+                        "Un dolor de cabeza súbito e intenso puede requerir atención urgente. "
+                        "Busque servicios de emergencia locales ahora."
+                    ),
+                },
+            )
+            asentar(
+                EventoAuditoria.Accion.ALERTA_BANDERA_ROJA,
+                usuario=self.request.user,
+                request=self.request,
+                entidad="alerta_bandera_roja",
+                entidad_id=alerta.pk,
+                episodio_id=episodio.pk,
+            )
 
         asentar(
             EventoAuditoria.Accion.EDICION,
@@ -276,3 +317,39 @@ class HistorialView(APIView):
                 "dias": DiaHistorialSerializer(filas, many=True).data,
             }
         )
+
+
+class ConfirmarAlertaBanderaRojaView(APIView):
+    """
+    HU-17 / RF-14. Confirma la lectura de la alerta de bandera roja.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AlertaBanderaRojaSerializer
+
+    @extend_schema(
+        request=None, responses={200: AlertaBanderaRojaSerializer}, tags=["M1", "M4"]
+    )
+    def post(self, request, pk):
+        try:
+            alerta = AlertaBanderaRoja.objects.select_related("episodio").get(
+                pk=pk, episodio__usuario=request.user
+            )
+        except AlertaBanderaRoja.DoesNotExist:
+            return Response(
+                {"detail": "Alerta no encontrada."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        alerta.confirmada = True
+        alerta.save(update_fields=["confirmada"])
+
+        asentar(
+            EventoAuditoria.Accion.EDICION,
+            usuario=request.user,
+            request=request,
+            entidad="alerta_bandera_roja",
+            entidad_id=alerta.pk,
+            confirmada=True,
+        )
+
+        return Response(AlertaBanderaRojaSerializer(alerta).data)

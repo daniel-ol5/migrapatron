@@ -211,3 +211,44 @@ class ValoracionHallazgo(models.Model):
     def __str__(self):
         veredicto = "util" if self.util else "no util"
         return f"{self.usuario.email}: {veredicto}"
+
+
+class EstimacionRiesgo(models.Model):
+    """
+    M2 / M3 (mp_risk_estimate / RF-09A a RF-09C).
+    Resultado de la estimación de riesgo personal producida por una EjecucionModelo (Analisis).
+    """
+
+    class Categoria(models.TextChoices):
+        BAJO = "BAJO", "Bajo"
+        MODERADO = "MODERADO", "Moderado"
+        ELEVADO = "ELEVADO", "Elevado"
+
+    analisis = models.OneToOneField(
+        Analisis, on_delete=models.CASCADE, related_name="estimacion_riesgo"
+    )
+    horizonte_horas = models.PositiveSmallIntegerField(
+        "horizonte temporal en horas", default=48
+    )
+    probabilidad = models.DecimalField(
+        "probabilidad estimada", max_digits=5, decimal_places=4
+    )
+    categoria_visual = models.CharField(
+        "categoría visual de riesgo", max_length=15, choices=Categoria.choices
+    )
+    factores_principales = models.JSONField(
+        "hasta tres factores principales en lenguaje no causal", default=list
+    )
+    advertencia = models.TextField(
+        "deslinde y advertencia obligatoria",
+        default="Una asociación no demuestra causalidad. Comenta estos resultados con tu médico.",
+    )
+    creada_en = models.DateTimeField("creada en", default=timezone.now)
+
+    class Meta:
+        db_table = "mp_risk_estimate"
+        verbose_name = "estimación de riesgo"
+        verbose_name_plural = "estimaciones de riesgo"
+
+    def __str__(self):
+        return f"Estimación {self.categoria_visual} ({self.probabilidad}) - Análisis #{self.analisis_id}"

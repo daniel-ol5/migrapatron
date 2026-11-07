@@ -12,11 +12,13 @@ import { SelectorEva } from '../componentes/Campos';
 import {
   duracionLegible,
   episodioNuevo,
+  type AlertaBanderaRoja,
   type Episodio,
 } from '../modelos';
+import { servicioAnalisis } from '../servicios/analisis';
 import { detalleDeError, servicioBitacora } from '../servicios/bitacora';
 
-/** HU-06 (alta), HU-08 (edición) y HU-09 (eliminación) del episodio. */
+/** HU-06 (alta), HU-08 (edición), HU-09 (eliminación) y HU-17 (bandera roja). */
 export default function EpisodioPagina() {
   const navegar = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -28,6 +30,7 @@ export default function EpisodioPagina() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
+  const [alertaRoja, setAlertaRoja] = useState<AlertaBanderaRoja | null>(null);
 
   useEffect(() => {
     if (!esEdicion) return;
@@ -85,7 +88,12 @@ export default function EpisodioPagina() {
     };
 
     try {
-      await servicioBitacora.guardarEpisodio(aEnviar);
+      const guardado = await servicioBitacora.guardarEpisodio(aEnviar);
+      if (guardado.alerta_bandera_roja) {
+        setAlertaRoja(guardado.alerta_bandera_roja);
+        setGuardando(false);
+        return;
+      }
       navegar('/', {
         state: { nota: esEdicion ? 'Episodio actualizado' : 'Episodio guardado' },
       });
@@ -93,6 +101,22 @@ export default function EpisodioPagina() {
       setError(detalleDeError(e));
       setGuardando(false);
     }
+  };
+
+  const atenderAlertaRoja = async () => {
+    if (alertaRoja) {
+      try {
+        await servicioAnalisis.confirmarAlertaBanderaRoja(alertaRoja.id);
+      } catch {
+        // Ignorar si ya fue confirmada previamente
+      }
+    }
+    setAlertaRoja(null);
+    navegar('/', {
+      state: {
+        nota: 'Episodio registrado. Por favor busca atención médica de urgencias.',
+      },
+    });
   };
 
   const eliminar = async () => {
@@ -195,6 +219,27 @@ export default function EpisodioPagina() {
         onCambio={(v) => cambiar('intensidad', v)}
       />
 
+      <TituloSeccion ayuda="¿El dolor alcanzó el pico máximo en menos de 1 minuto?">
+        Forma de comienzo
+      </TituloSeccion>
+      <div className="tarjeta-lista">
+        <Interruptor
+          titulo="Inicio repentino / súbito"
+          detalle="El dolor comenzó con intensidad explosiva en cuestión de segundos o minutos."
+          valor={ep.inicio_subito ?? false}
+          desactivado={guardando}
+          onCambio={(v) => cambiar('inicio_subito', v)}
+        />
+      </div>
+
+      {ep.intensidad === 10 && ep.inicio_subito && (
+        <div style={{ marginTop: 'var(--esp-sm)' }}>
+          <Mensaje tipo="error">
+            <strong>Atención:</strong> Has indicado intensidad máxima (10/10) e inicio súbito. Esto constituye un signo de alarma clínica prioritaria (Cefalea en trueno / Bandera Roja).
+          </Mensaje>
+        </div>
+      )}
+
       <TituloSeccion>Síntomas que acompañaron</TituloSeccion>
       <div className="tarjeta-lista">
         <Interruptor
@@ -262,6 +307,16 @@ export default function EpisodioPagina() {
           mensaje="Se borra de forma permanente y deja de contar para el análisis."
           onAceptar={eliminar}
           onCancelar={() => setConfirmando(false)}
+        />
+      )}
+
+      {alertaRoja !== null && (
+        <Dialogo
+          titulo="ALERTA MÉDICA PRIORITARIA (Bandera Roja)"
+          mensaje={alertaRoja.mensaje}
+          textoAceptar="Entendido, buscaré atención"
+          onAceptar={() => void atenderAlertaRoja()}
+          onCancelar={() => setAlertaRoja(null)}
         />
       )}
     </div>

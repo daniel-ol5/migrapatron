@@ -199,6 +199,11 @@ class Episodio(models.Model):
     )
 
     inicio = models.DateTimeField("inicio")
+    inicio_subito = models.BooleanField(
+        "inicio súbito (< 1 minuto)",
+        default=False,
+        help_text="Verdadero si el dolor alcanzó su máxima intensidad en menos de un minuto (criterio ICHD-3 de cefalea en trueno).",
+    )
     duracion_min = models.PositiveIntegerField(
         "duración en minutos",
         null=True,
@@ -276,3 +281,45 @@ class Episodio(models.Model):
             usuario=self.usuario, fecha=fecha
         ).first()
         return self.registro_diario
+
+
+class AlertaBanderaRoja(models.Model):
+    """
+    HU-17 / RF-14. Alerta de bandera roja para cefalea en trueno (mp_red_flag_alert).
+
+    Se genera de forma prioritaria cuando un episodio registra intensidad 10/10
+    e inicio súbito en menos de 1 minuto (criterios ICHD-3). Orienta a atención de
+    emergencia sin emitir diagnóstico clínico ni realizar contacto automático.
+    """
+
+    class Tipo(models.TextChoices):
+        CEFALEA_EN_TRUENO = "CEFALEA_EN_TRUENO", "Bandera roja: Cefalea en trueno"
+
+    episodio = models.OneToOneField(
+        Episodio, on_delete=models.CASCADE, related_name="alerta_bandera_roja"
+    )
+    tipo = models.CharField(
+        "tipo de bandera roja",
+        max_length=40,
+        choices=Tipo.choices,
+        default=Tipo.CEFALEA_EN_TRUENO,
+    )
+    mensaje = models.TextField(
+        "mensaje de orientación",
+        default=(
+            "Un dolor de cabeza súbito e intenso puede requerir atención urgente. "
+            "Busque servicios de emergencia locales ahora."
+        ),
+    )
+    confirmada = models.BooleanField(
+        "confirmación de lectura por el paciente", default=False
+    )
+    creada_en = models.DateTimeField("creada en", default=timezone.now)
+
+    class Meta:
+        db_table = "alerta_bandera_roja"
+        verbose_name = "alerta de bandera roja"
+        verbose_name_plural = "alertas de banderas rojas"
+
+    def __str__(self):
+        return f"Alerta {self.tipo} - Episodio #{self.episodio_id} (confirmada: {self.confirmada})"

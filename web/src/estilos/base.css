@@ -144,6 +144,8 @@ code {
   border: 1px solid var(--borde);
   border-radius: var(--radio-grande);
   padding: var(--esp-md);
+  box-shadow: var(--sombra-suave);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tarjeta-lista {
@@ -151,6 +153,7 @@ code {
   border: 1px solid var(--borde);
   border-radius: var(--radio-grande);
   overflow: hidden;
+  box-shadow: var(--sombra-suave);
 }
 
 .tarjeta-lista > * + * {
@@ -196,16 +199,24 @@ button {
   font-size: 0.94rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.12s ease;
+  box-shadow: 0 2px 6px rgba(75, 151, 197, 0.25);
+  transition: all 0.15s ease;
 }
 
 .boton:hover:not(:disabled) {
-  opacity: 0.88;
+  background: var(--primario-hover);
+  box-shadow: 0 4px 10px rgba(75, 151, 197, 0.35);
+  transform: translateY(-1px);
+}
+
+.boton:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .boton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .boton-ancho {
@@ -213,14 +224,17 @@ button {
 }
 
 .boton-contorno {
-  background: transparent;
-  border-color: var(--borde);
+  background: var(--tarjeta);
+  border: 1px solid var(--borde-fuerte);
   color: var(--primario);
+  box-shadow: none;
 }
 
 .boton-contorno:hover:not(:disabled) {
   background: var(--tarjeta-alta);
-  opacity: 1;
+  border-color: var(--primario);
+  box-shadow: 0 2px 8px rgba(75, 151, 197, 0.15);
+  transform: translateY(-1px);
 }
 
 .boton-texto {
@@ -240,6 +254,11 @@ button {
 .boton-peligro {
   background: var(--error);
   color: #fff;
+  box-shadow: 0 2px 6px rgba(185, 68, 68, 0.25);
+}
+
+.boton-peligro:hover:not(:disabled) {
+  background: #a33838;
 }
 
 .boton-icono {
@@ -293,6 +312,7 @@ textarea {
   border-radius: var(--radio);
   padding: 11px var(--esp-md);
   font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input:focus,
@@ -300,7 +320,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--primario);
-  box-shadow: 0 0 0 1px var(--primario);
+  box-shadow: 0 0 0 3px rgba(123, 178, 216, 0.35);
 }
 
 input:disabled,
@@ -504,6 +524,7 @@ input[type='range'] {
   z-index: 10;
   background: var(--fondo);
   border-bottom: 1px solid var(--borde);
+  box-shadow: 0 1px 4px rgba(39, 59, 64, 0.04);
 }
 
 .cabecera-interior {
@@ -535,21 +556,25 @@ input[type='range'] {
 }
 
 .nav-enlace {
-  padding: 7px 12px;
+  padding: 7px 14px;
   border-radius: var(--radio);
   color: var(--apagado);
   font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
 .nav-enlace:hover {
-  background: var(--tarjeta-alta);
+  background: var(--tarjeta);
+  color: var(--primario);
   text-decoration: none;
 }
 
 .nav-enlace.activo {
-  background: var(--tarjeta-alta);
+  background: var(--tarjeta);
   color: var(--primario);
   font-weight: 600;
+  box-shadow: 0 1px 3px rgba(39, 59, 64, 0.08);
 }
 
 /* ------------------------------------------------------------- diálogo */

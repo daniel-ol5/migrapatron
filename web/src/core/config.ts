@@ -17,14 +17,14 @@ export const PERIODO_ANALISIS_DIAS = 90;
 export const VENTANA_HORAS = 48;
 
 /**
- * M2.1. Criterios mínimos de evidencia antes de analizar.
+ * M2.1. Criterios mínimos de evidencia antes de analizar (según tesis/documentación oficial).
  *
- * Se replican aquí solo para mostrarle al paciente cuánto le falta. La
- * validación que decide es la del backend: si estos valores se desincronizan,
- * manda el servidor.
+ * Requiere 60 días válidos de registro y balance mínimo de 6 días con episodio / 6 días sin episodio.
+ * Se replican aquí para mostrarle al paciente su progreso. La validación autoritativa
+ * es la del backend (`/api/analisis/suficiencia/`).
  */
-export const MINIMO_BITACORAS = 20;
-export const MINIMO_EPISODIOS = 3;
+export const MINIMO_BITACORAS = 60;
+export const MINIMO_EPISODIOS = 6;
 
 /** Esta leyenda acompaña siempre a los hallazgos y a los reportes. */
 export const AVISO_NO_CAUSALIDAD =

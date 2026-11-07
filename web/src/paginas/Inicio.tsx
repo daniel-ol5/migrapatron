@@ -15,9 +15,11 @@ import {
   comoFecha,
   duracionLegible,
   sintomasLocales,
+  type AlertaMedicacion,
   type Episodio,
   type Historial,
 } from '../modelos';
+import { servicioAnalisis } from '../servicios/analisis';
 import { detalleDeError, servicioBitacora } from '../servicios/bitacora';
 
 /** Pantalla de inicio: el estado de hoy y el avance hacia el análisis. */
@@ -28,6 +30,7 @@ export default function Inicio() {
   const nota = (ubicacion.state as { nota?: string } | null)?.nota;
 
   const [historial, setHistorial] = useState<Historial | null>(null);
+  const [alertaMedicacion, setAlertaMedicacion] = useState<AlertaMedicacion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,8 +39,14 @@ export default function Inicio() {
 
     const cargar = async () => {
       try {
-        const datos = await servicioBitacora.historial(30);
-        if (vigente) setHistorial(datos);
+        const [datos, med] = await Promise.all([
+          servicioBitacora.historial(30),
+          servicioAnalisis.alertaMedicacion().catch(() => null),
+        ]);
+        if (vigente) {
+          setHistorial(datos);
+          setAlertaMedicacion(med);
+        }
       } catch (e) {
         if (vigente) setError(detalleDeError(e));
       } finally {
@@ -90,7 +99,7 @@ export default function Inicio() {
         className="boton boton-contorno boton-ancho"
         style={{ marginTop: 'var(--esp-sm)' }}
       >
-        ⚡ Registrar un episodio
+        Registrar un episodio
       </Link>
 
       {cargando && <Cargando />}
@@ -101,35 +110,82 @@ export default function Inicio() {
         </div>
       )}
 
+      {alertaMedicacion?.alerta_activa && (
+        <div
+          className="tarjeta"
+          style={{
+            marginTop: 'var(--esp-md)',
+            borderLeft: '4px solid var(--aviso)',
+          }}
+        >
+          <div className="fila">
+            <span
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 'var(--radio)',
+                background: 'rgba(184, 124, 40, 0.15)',
+                color: 'var(--aviso)',
+                display: 'grid',
+                placeItems: 'center',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                flex: 'none',
+              }}
+              aria-hidden="true"
+            >
+              Rx
+            </span>
+            <div className="crecer">
+              <strong style={{ color: 'var(--aviso)' }}>
+                Alerta de Medicación de Rescate
+              </strong>
+              <p className="pequeno" style={{ marginTop: 'var(--esp-xs)' }}>
+                {alertaMedicacion.mensaje}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {historial !== null && (
         <>
           <TituloSeccion>Avance hacia el análisis</TituloSeccion>
           <div className="tarjeta">
             <p style={{ marginBottom: 'var(--esp-md)', fontWeight: 600 }}>
-              {listo ? '✓ Ya tienes datos suficientes' : 'Todavía faltan datos'}
+              {listo ? 'Datos suficientes para análisis IA' : 'Todavía faltan datos'}
             </p>
 
             <div className="columna" style={{ gap: 'var(--esp-md)' }}>
               <Barra
-                etiqueta="Días completos"
+                etiqueta="Días completos (mínimo 60)"
                 actual={bitacoras}
                 meta={MINIMO_BITACORAS}
               />
               <Barra
-                etiqueta="Episodios"
+                etiqueta="Episodios (mínimo 6)"
                 actual={totalEpisodios}
                 meta={MINIMO_EPISODIOS}
               />
             </div>
 
-            <p
-              className="pequeno apagado"
-              style={{ marginTop: 'var(--esp-md)', lineHeight: 1.45 }}
-            >
-              {listo
-                ? 'El análisis de patrones estará disponible cuando se implemente el módulo M2.'
-                : queFalta(bitacoras, totalEpisodios)}
-            </p>
+            {listo ? (
+              <div style={{ marginTop: 'var(--esp-md)' }}>
+                <p className="pequeno" style={{ marginBottom: 'var(--esp-sm)', color: 'var(--exito)' }}>
+                  Cumples con el volumen y balance de 60 días para entrenar tu modelo supervisado de Regresión Logística L2.
+                </p>
+                <Link to="/analisis" className="boton boton-ancho">
+                  Ver análisis y estimación de riesgo
+                </Link>
+              </div>
+            ) : (
+              <p
+                className="pequeno apagado"
+                style={{ marginTop: 'var(--esp-md)', lineHeight: 1.45 }}
+              >
+                {queFalta(bitacoras, totalEpisodios)}
+              </p>
+            )}
           </div>
         </>
       )}

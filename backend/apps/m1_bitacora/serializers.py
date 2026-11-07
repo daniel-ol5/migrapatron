@@ -3,7 +3,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Episodio, RegistroDiario
+from .models import AlertaBanderaRoja, Episodio, RegistroDiario
 
 
 class RegistroDiarioSerializer(serializers.ModelSerializer):
@@ -71,8 +71,17 @@ class RegistroDiarioSerializer(serializers.ModelSerializer):
         return datos
 
 
+class AlertaBanderaRojaSerializer(serializers.ModelSerializer):
+    """HU-17 / RF-14. Alerta médica prioritaria de bandera roja."""
+
+    class Meta:
+        model = AlertaBanderaRoja
+        fields = ["id", "tipo", "mensaje", "confirmada", "creada_en"]
+        read_only_fields = ["id", "tipo", "mensaje", "creada_en"]
+
+
 class EpisodioSerializer(serializers.ModelSerializer):
-    """HU-06, HU-08. Episodio con intensidad y síntomas acompañantes."""
+    """HU-06, HU-08, HU-17. Episodio con intensidad, inicio súbito y síntomas."""
 
     en_curso = serializers.BooleanField(read_only=True)
     sintomas_presentes = serializers.ListField(
@@ -81,12 +90,14 @@ class EpisodioSerializer(serializers.ModelSerializer):
     fecha_bitacora = serializers.DateField(
         source="registro_diario.fecha", read_only=True, allow_null=True
     )
+    alerta_bandera_roja = AlertaBanderaRojaSerializer(read_only=True)
 
     class Meta:
         model = Episodio
         fields = [
             "id",
             "inicio",
+            "inicio_subito",
             "duracion_min",
             "intensidad",
             "nauseas",
@@ -97,6 +108,7 @@ class EpisodioSerializer(serializers.ModelSerializer):
             "en_curso",
             "sintomas_presentes",
             "fecha_bitacora",
+            "alerta_bandera_roja",
             "creado_en",
             "actualizado_en",
         ]
@@ -105,6 +117,7 @@ class EpisodioSerializer(serializers.ModelSerializer):
             "en_curso",
             "sintomas_presentes",
             "fecha_bitacora",
+            "alerta_bandera_roja",
             "creado_en",
             "actualizado_en",
         ]

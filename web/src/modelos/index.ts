@@ -235,10 +235,19 @@ export function registroHaciaApi(
   };
 }
 
+export interface AlertaBanderaRoja {
+  id: number;
+  tipo: string;
+  mensaje: string;
+  confirmada: boolean;
+  creada_en: string;
+}
+
 export interface Episodio {
   id: number | null;
   /** ISO 8601 con zona. */
   inicio: string;
+  inicio_subito?: boolean;
   duracion_min: number | null;
   /** Escala EVA de 1 a 10. */
   intensidad: number;
@@ -251,12 +260,14 @@ export interface Episodio {
   /** Los síntomas ya traducidos por el backend. */
   sintomas_presentes?: string[];
   fecha_bitacora?: string | null;
+  alerta_bandera_roja?: AlertaBanderaRoja | null;
 }
 
 export function episodioNuevo(): Episodio {
   return {
     id: null,
     inicio: new Date().toISOString(),
+    inicio_subito: false,
     duracion_min: 60,
     intensidad: 5,
     nauseas: false,
@@ -290,6 +301,7 @@ export function duracionLegible(minutos: number | null): string {
 export function episodioHaciaApi(e: Episodio): Record<string, unknown> {
   return {
     inicio: e.inicio,
+    inicio_subito: e.inicio_subito ?? false,
     duracion_min: e.duracion_min,
     intensidad: e.intensidad,
     nauseas: e.nauseas,
@@ -320,4 +332,65 @@ export interface Historial {
 
 export function tuvoEpisodio(d: DiaHistorial): boolean {
   return d.episodios.length > 0;
+}
+
+// ============================================================ M2 Análisis
+export interface EstadoSuficiencia {
+  cumple: boolean;
+  dias_validos: number;
+  meta_dias: number;
+  faltan_dias: number;
+  dias_con_episodio: number;
+  meta_episodios: number;
+  faltan_episodios: number;
+  dias_sin_episodio: number;
+  meta_sin_episodio: number;
+  faltan_sin_episodio: number;
+  barra_avance_pct: number;
+  mensaje: string;
+}
+
+export interface AlertaMedicacion {
+  total_dias_rescate_30d: number;
+  umbral_maximo: number;
+  alerta_activa: boolean;
+  mensaje: string;
+}
+
+export interface FactorPrincipal {
+  codigo: string;
+  nombre: string;
+  explicacion: string;
+  coeficiente: number;
+  impacto: number;
+}
+
+export interface MetricasTecnicas {
+  auc_roc: number;
+  auc_pr: number;
+  brier_score: number;
+  sensibilidad: number;
+  especificidad: number;
+  tamano_entrenamiento: number;
+  tamano_validacion: number;
+}
+
+export interface EstimacionRiesgo {
+  id: number;
+  horizonte_horas: number;
+  probabilidad: number;
+  categoria_visual: 'BAJO' | 'MODERADO' | 'ALTO' | string;
+  factores_principales: FactorPrincipal[];
+  advertencia: string;
+  creada_en: string;
+}
+
+export interface RespuestaAnalisis {
+  estado: string;
+  mensaje: string;
+  suficiencia: EstadoSuficiencia;
+  alerta_medicacion: AlertaMedicacion;
+  estimacion: EstimacionRiesgo | null;
+  metricas_tecnicas: MetricasTecnicas | null;
+  advertencia: string;
 }

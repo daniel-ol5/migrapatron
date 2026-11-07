@@ -60,7 +60,7 @@ export default function HistorialPagina() {
       <div className="fila-separada">
         <h1>Historial</h1>
         <Link to="/episodio/nuevo" className="boton">
-          ⚡ Episodio
+          Registrar episodio
         </Link>
       </div>
 
@@ -98,9 +98,9 @@ export default function HistorialPagina() {
       {historial !== null && (
         <div className="fila" style={{ marginTop: 'var(--esp-md)' }}>
           <span className="pastilla">
-            ✓ {historial.bitacoras_completas} días completos
+            {historial.bitacoras_completas} días completos
           </span>
-          <span className="pastilla">⚡ {historial.total_episodios} episodios</span>
+          <span className="pastilla">{historial.total_episodios} episodios</span>
         </div>
       )}
 
@@ -114,7 +114,7 @@ export default function HistorialPagina() {
 
       {!cargando && error === null && visibles.length === 0 && (
         <EstadoVacio
-          icono="📅"
+          icono=""
           titulo="Nada registrado en este periodo"
           detalle="Registra tu día desde la pantalla de inicio."
         />
